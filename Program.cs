@@ -26,6 +26,7 @@ using PortfolioPlatform.Api.Services.Implementations.Email;
 using PortfolioPlatform.Api.Services.Implementations.Profiles;
 using PortfolioPlatform.Api.Services.Implementations.Projects;
 using PortfolioPlatform.Api.Services.Implementations.Users;
+using Scalar.AspNetCore;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -124,14 +125,18 @@ builder
     });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Use the first-party OpenAPI generator and let Scalar handle the interactive UI.
+// This keeps the API docs aligned with the modern ASP.NET Core documentation stack.
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // The raw OpenAPI document is still available for tooling, while Scalar gives us
+    // a cleaner interactive reference for local development.
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
@@ -141,5 +146,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
 
 
