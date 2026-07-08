@@ -25,5 +25,15 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
   </ItemGroup>
 
+  <!-- Keep generated build output out of the source compile set, even when a custom intermediate output folder is used. -->
+  <ItemGroup>
+    <Compile Remove="bin\**;obj\**" />
+    <Content Remove="bin\**;obj\**" />
+    <EmbeddedResource Remove="bin\**;obj\**" />
+    <None Remove="bin\**;obj\**" />
+  </ItemGroup>
+
 </Project>
+
+
 

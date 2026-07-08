@@ -1,40 +1,63 @@
 using Microsoft.EntityFrameworkCore;
 using PortfolioPlatform.Api.Data;
 using PortfolioPlatform.Api.Dtos.Projects;
+using PortfolioPlatform.Api.Enums.Projects;
 using PortfolioPlatform.Api.Exceptions;
+using PortfolioPlatform.Api.Models;
 using PortfolioPlatform.Api.Models.Content;
 using PortfolioPlatform.Api.Services.Abstractions.Projects;
+using PortfolioPlatform.Api.Services.Abstractions.Tags;
 
 namespace PortfolioPlatform.Api.Services.Implementations.Projects;
 
 /// <summary>
 /// Handles project management for profile owners and public visitors.
 /// </summary>
-public class ProjectService(ApplicationDbContext context) : IProjectService
+public class ProjectService(ApplicationDbContext context, ITagService tagService) : IProjectService
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly ITagService _tagService = tagService;
 
     /// <inheritdoc/>
-    public async Task<List<ProjectDto>> GetMineAsync(int userId)
+    public async Task<PageInfo<ProjectDto>> GetMineAsync(int userId, ProjectFilters filters)
     {
         // Projects are owned through a profile. This lookup gives us the profile id and proves ownership.
         int profileId = await GetOwnedProfileIdAsync(userId);
 
+        // Keep incoming paging values sensible. This protects the endpoint from accidental huge requests
+        // while still letting the frontend offer a few practical page sizes.
+        int page = Math.Max(filters.Page, 1);
+        int pageSize = Math.Clamp(filters.PageSize, 1, 50);
+
         // Owner reads include drafts because the project editor and dashboard need unfinished work.
         // Public reads have their own stricter filters, so drafts are not exposed to visitors.
-        return await ProjectDtos(
-                _context
-                    .Projects
-                    .AsNoTracking()
-                    .Where(project => project.ProfileId == profileId)
-            )
-            // Featured projects should appear first because they are the work the owner wants to highlight.
-            .OrderByDescending(project => project.IsFeatured)
-            // SortOrder gives the owner manual control when several projects are featured or grouped.
-            .ThenBy(project => project.SortOrder)
-            // Title ordering gives a stable fallback when featured and manual sort values are the same.
-            .ThenBy(project => project.Title)
+        IQueryable<Project> query = _context
+            .Projects
+            .AsNoTracking()
+            .Where(project => project.ProfileId == profileId);
+
+        // Keep filtering before counting so TotalItems reflects the current search/filter selection.
+        query = ApplyProjectFilters(query, filters);
+        int totalItems = await query.CountAsync();
+
+        // Sorting also happens before projection so the database handles ordering efficiently.
+        query = ApplyProjectSort(query, filters.SortBy);
+
+        // Apply paging after filtering and sorting. The frontend paginator is 0-based, but the API
+        // contract remains 1-based like the rest of the platform.
+        List<ProjectDto> projects = await ProjectDtos(query)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PageInfo<ProjectDto>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            HasMore = totalItems > page * pageSize,
+            Items = projects
+        };
     }
 
     /// <inheritdoc/>
@@ -120,6 +143,9 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
         // Use the same assignment helper as update so create/update behavior stays aligned.
         ApplyChanges(project, dto);
 
+        // Attach tags before the first save, matching the question/tag flow used elsewhere.
+        await UpdateProjectTagsAsync(project, dto.Tags);
+
         _context.Projects.Add(project);
         await _context.SaveChangesAsync();
 
@@ -135,6 +161,7 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
 
         Project project = await _context
             .Projects
+            .Include(project => project.Tags)
             .FirstOrDefaultAsync(project => project.Id == projectId && project.ProfileId == profileId)
             ?? throw new KeyNotFoundException($"Project with ID '{projectId}' was not found.");
 
@@ -143,6 +170,10 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
 
         // Keep all editable fields in one helper so new fields do not get missed in create or update.
         ApplyChanges(project, dto);
+
+        // Keep the tag collection in sync with the names submitted by the form.
+        await UpdateProjectTagsAsync(project, dto.Tags);
+
         project.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -159,11 +190,85 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
 
         Project project = await _context
             .Projects
+            .Include(project => project.Tags)
             .FirstOrDefaultAsync(project => project.Id == projectId && project.ProfileId == profileId)
             ?? throw new KeyNotFoundException($"Project with ID '{projectId}' was not found.");
 
         _context.Projects.Remove(project);
         await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Applies owner-list project filters before projection.
+    /// </summary>
+    /// <param name="query">The project query already scoped to the authenticated owner.</param>
+    /// <param name="filters">Filter values supplied from the request query string.</param>
+    /// <returns>The filtered project query.</returns>
+    private static IQueryable<Project> ApplyProjectFilters(IQueryable<Project> query, ProjectFilters filters)
+    {
+        // Status is about public visibility. Owners can still see drafts; this just lets them narrow the list.
+        query = filters.Status switch
+        {
+            ProjectStatus.Published => query.Where(project => project.IsPublished),
+            ProjectStatus.Draft => query.Where(project => !project.IsPublished),
+            _ => query
+        };
+
+        // Featured filtering is separate from status because a project can be featured and still be a draft.
+        query = filters.Featured switch
+        {
+            FeaturedFilter.Featured => query.Where(project => project.IsFeatured),
+            FeaturedFilter.Regular => query.Where(project => !project.IsFeatured),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
+        {
+            string searchTerm = filters.SearchTerm.Trim().ToLower();
+
+            // Keep this search broad enough for owner management without making it expensive.
+            // Tags are searched too so owners can find work by skill, subject, tool, or theme.
+            query = query.Where(
+                project =>
+                    project.Title.ToLower().Contains(searchTerm)
+                    || project.Summary.ToLower().Contains(searchTerm)
+                    || (project.Problem != null && project.Problem.ToLower().Contains(searchTerm))
+                    || (project.Solution != null && project.Solution.ToLower().Contains(searchTerm))
+                    || (project.ContentText != null && project.ContentText.ToLower().Contains(searchTerm))
+                    || project.Tags.Any(tag => tag.Name.ToLower().Contains(searchTerm))
+            );
+        }
+
+        return query;
+    }
+
+    /// <summary>
+    /// Applies the selected owner-list sort option to a project query.
+    /// </summary>
+    /// <param name="query">The filtered project query.</param>
+    /// <param name="sortOption">The requested sort option.</param>
+    /// <returns>The ordered project query.</returns>
+    private static IQueryable<Project> ApplyProjectSort(IQueryable<Project> query, SortOption sortOption)
+    {
+        // Manual order mirrors the public profile order: featured work first, then the owner's SortOrder.
+        if (sortOption == SortOption.Manual)
+        {
+            return query
+                .OrderByDescending(project => project.IsFeatured)
+                .ThenBy(project => project.SortOrder)
+                .ThenBy(project => project.Title);
+        }
+
+        // Title sorting is useful when a creator is tidying a larger list of work.
+        if (sortOption == SortOption.Title)
+        {
+            return query.OrderBy(project => project.Title);
+        }
+
+        // Date sorting uses UpdatedAt when available, then falls back to CreatedAt for untouched projects.
+        return sortOption == SortOption.Oldest
+            ? query.OrderBy(project => project.UpdatedAt ?? project.CreatedAt).ThenBy(project => project.Title)
+            : query.OrderByDescending(project => project.UpdatedAt ?? project.CreatedAt).ThenBy(project => project.Title);
     }
 
     /// <summary>
@@ -190,7 +295,7 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
             ContentHtml = project.ContentHtml,
             ContentText = project.ContentText,
 
-            TechStack = project.TechStack,
+            Tags = project.Tags.Select(tag => tag.Name).ToList(),
 
             // The API stores only URLs for media. The actual uploads are handled by the frontend.
             CoverImageUrl = project.CoverImageUrl,
@@ -254,6 +359,39 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
     }
 
     /// <summary>
+    /// Updates the tag navigation collection on a project from submitted tag names.
+    /// </summary>
+    /// <param name="project">The tracked project entity being created or updated.</param>
+    /// <param name="newTagNames">The tag names submitted by the form.</param>
+    private async Task UpdateProjectTagsAsync(Project project, List<string> newTagNames)
+    {
+        // Distinct with a case-insensitive comparer prevents duplicates like "Vue" and "vue".
+        var cleanedTagNames = newTagNames
+            .Where(tagName => !string.IsNullOrWhiteSpace(tagName))
+            .Select(tagName => tagName.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Remove tags that are no longer present in the submitted list.
+        foreach (var tag in project.Tags.ToList())
+        {
+            if (!cleanedTagNames.Any(tagName => tagName.Equals(tag.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                project.Tags.Remove(tag);
+            }
+        }
+
+        // Add missing tags through the tag service so existing tag rows are reused.
+        foreach (string tagName in cleanedTagNames)
+        {
+            if (project.Tags.Any(tag => tag.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            Tag tag = await _tagService.GetByNameAsync(tagName); // creates if not exists
+            project.Tags.Add(tag);
+        }
+    }
+    /// <summary>
     /// Copies editable fields from the incoming DTO onto a project entity.
     /// </summary>
     /// <param name="project">The project entity being created or updated.</param>
@@ -274,9 +412,9 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
         project.ContentHtml = dto.ContentHtml;
         project.ContentText = dto.ContentText;
 
-        // Tech stack is intentionally a simple string list so it works for developers, tutors,
-        // creators, and anyone else describing tools or skills used in the work.
-        project.TechStack = dto.TechStack;
+        // Tags keep projects flexible: a developer can list tools, while a tutor,
+        // designer, writer, or creator can describe subjects, skills, or themes.
+        // Tags are attached through ITagService so the same tag rows can be reused across content.
 
         // The API stores only the final URLs. Actual file uploads are handled by the frontend.
         project.CoverImageUrl = dto.CoverImageUrl;
@@ -296,3 +434,9 @@ public class ProjectService(ApplicationDbContext context) : IProjectService
         project.SeoDescription = dto.SeoDescription;
     }
 }
+
+
+
+
+
+

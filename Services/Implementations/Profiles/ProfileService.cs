@@ -26,9 +26,12 @@ public class ProfileService(ApplicationDbContext context) : IProfileService
                 DisplayName = profile.DisplayName,
                 Slug = profile.Slug,
                 Headline = profile.Headline,
+                Tagline = profile.Tagline,
                 Bio = profile.Bio,
-                Focus = profile.Focus,
-                AvatarUrl = profile.AvatarUrl,
+                AboutContentText = profile.AboutContentText,
+                AboutContentHtml = profile.AboutContentHtml,
+                CurrentFocus = profile.CurrentFocus,
+                ProfileImageUrl = profile.ProfileImageUrl,
                 CoverImageUrl = profile.CoverImageUrl,
                 Location = profile.Location,
                 WebsiteUrl = profile.WebsiteUrl,
@@ -60,9 +63,12 @@ public class ProfileService(ApplicationDbContext context) : IProfileService
                 DisplayName = profile.DisplayName,
                 Slug = profile.Slug,
                 Headline = profile.Headline,
+                Tagline = profile.Tagline,
                 Bio = profile.Bio,
-                Focus = profile.Focus,
-                AvatarUrl = profile.AvatarUrl,
+                AboutContentText = profile.AboutContentText,
+                AboutContentHtml = profile.AboutContentHtml,
+                CurrentFocus = profile.CurrentFocus,
+                ProfileImageUrl = profile.ProfileImageUrl,
                 CoverImageUrl = profile.CoverImageUrl,
                 Location = profile.Location,
                 WebsiteUrl = profile.WebsiteUrl,
@@ -114,9 +120,12 @@ public class ProfileService(ApplicationDbContext context) : IProfileService
         profile.DisplayName = dto.DisplayName;
         profile.Slug = dto.Slug;
         profile.Headline = dto.Headline;
+        profile.Tagline = dto.Tagline;
         profile.Bio = dto.Bio;
-        profile.Focus = dto.Focus;
-        profile.AvatarUrl = dto.AvatarUrl;
+        profile.AboutContentText = dto.AboutContentText;
+        profile.AboutContentHtml = dto.AboutContentHtml;
+        profile.CurrentFocus = dto.CurrentFocus;
+        profile.ProfileImageUrl = dto.ProfileImageUrl;
         profile.CoverImageUrl = dto.CoverImageUrl;
         profile.Location = dto.Location;
         profile.WebsiteUrl = dto.WebsiteUrl;
@@ -145,4 +154,3 @@ public class ProfileService(ApplicationDbContext context) : IProfileService
         await _context.SaveChangesAsync();
     }
 }
-

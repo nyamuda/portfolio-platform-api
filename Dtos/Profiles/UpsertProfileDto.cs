@@ -30,21 +30,33 @@ public class UpsertProfileDto
     public required string Headline { get; set; }
 
     /// <summary>
-    /// Longer profile introduction or biography.
+    /// Short supporting line shown near the profile headline.
     /// </summary>
-    [StringLength(4000)]
+    public string? Tagline { get; set; }
+    /// <summary>
+    /// Short plain-text profile summary used in hero sections, cards, and compact previews.
+    /// </summary>
     public string? Bio { get; set; }
 
     /// <summary>
-    /// Optional short statement about current focus.
+    /// Plain-text version of the profile about section.
     /// </summary>
-    [StringLength(300)]
-    public string? Focus { get; set; }
+    public string? AboutContentText { get; set; }
 
     /// <summary>
-    /// Avatar image URL uploaded by the frontend.
+    /// Rich HTML version of the profile about section.
     /// </summary>
-    public string? AvatarUrl { get; set; }
+    public string? AboutContentHtml { get; set; }
+
+    /// <summary>
+    /// Optional text describing what the person is currently working on.
+    /// </summary>
+    public string? CurrentFocus { get; set; }
+
+    /// <summary>
+    /// Profile image URL uploaded by the frontend.
+    /// </summary>
+    public string? ProfileImageUrl { get; set; }
 
     /// <summary>
     /// Cover image URL uploaded by the frontend.
@@ -98,3 +110,5 @@ public class UpsertProfileDto
     /// </summary>
     public bool IsPublished { get; set; }
 }
+
+

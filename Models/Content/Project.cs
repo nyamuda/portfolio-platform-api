@@ -73,9 +73,9 @@ public class Project
     public string? ContentText { get; set; }
 
     /// <summary>
-    /// Technologies, tools, skills, or subject areas connected to the project.
+    /// Short labels that describe the project, such as tools, skills, subjects, or themes.
     /// </summary>
-    public List<string> TechStack { get; set; } = [];
+    public List<Tag> Tags { get; set; } = [];
 
     /// <summary>
     /// Public URL of the cover image used for project previews.
@@ -145,3 +145,5 @@ public class Project
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 }
+
+

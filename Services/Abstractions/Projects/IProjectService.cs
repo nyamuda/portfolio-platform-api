@@ -1,4 +1,5 @@
 using PortfolioPlatform.Api.Dtos.Projects;
+using PortfolioPlatform.Api.Models;
 
 namespace PortfolioPlatform.Api.Services.Abstractions.Projects;
 
@@ -11,8 +12,9 @@ public interface IProjectService
     /// Gets all projects owned by the authenticated user's profile.
     /// </summary>
     /// <param name="userId">Authenticated user id.</param>
-    /// <returns>Projects owned by the user's profile.</returns>
-    Task<List<ProjectDto>> GetMineAsync(int userId);
+    /// <param name="filters">Project list filters from the query string.</param>
+    /// <returns>A paginated page of projects owned by the user's profile.</returns>
+    Task<PageInfo<ProjectDto>> GetMineAsync(int userId, ProjectFilters filters);
 
     /// <summary>
     /// Gets one project owned by the authenticated user's profile.
@@ -61,3 +63,6 @@ public interface IProjectService
     /// <param name="projectId">Project id.</param>
     Task DeleteAsync(int userId, int projectId);
 }
+
+
+

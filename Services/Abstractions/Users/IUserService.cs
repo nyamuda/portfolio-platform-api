@@ -1,4 +1,5 @@
-﻿using PortfolioPlatform.Api.Dtos.Users;
+using PortfolioPlatform.Api.Dtos.Auth;
+using PortfolioPlatform.Api.Dtos.Users;
 
 namespace PortfolioPlatform.Api.Services.Abstractions.Users;
 
@@ -27,6 +28,13 @@ public interface IUserService
     /// <param name="userId">The authenticated user id.</param>
     /// <param name="dto">The updated profile fields.</param>
     Task UpdateProfileAsync(int userId, UpdateUserProfileDto dto);
+
+    /// <summary>
+    /// Starts an email change by storing the new address as pending and sending a verification code.
+    /// </summary>
+    /// <param name="userId">The authenticated user id.</param>
+    /// <param name="dto">The requested email address.</param>
+    Task UpdateEmailAsync(int userId, UpdateEmailDto dto);
 
     /// <summary>
     /// Updates a user's username after checking that the new username is available.

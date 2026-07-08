@@ -53,27 +53,54 @@ public class Profile
     public required string Headline { get; set; }
 
     /// <summary>
-    /// Longer public introduction or biography.
+    /// Short supporting line shown near the profile headline.
     /// </summary>
     /// <remarks>
-    /// This should explain the person's background, skills, work, or teaching focus in a human way.
+    /// The tagline is a quick positioning statement, not the full biography. It should help visitors
+    /// understand the person's value or style in one short sentence.
     /// </remarks>
-    [StringLength(4000)]
+    public string? Tagline { get; set; }
+    /// <summary>
+    /// Short plain-text profile summary used in hero sections, cards, and compact previews.
+    /// </summary>
+    /// <remarks>
+    /// This is different from the full About section. Keep it short enough to introduce the person quickly.
+    /// </remarks>
     public string? Bio { get; set; }
 
     /// <summary>
-    /// Optional short statement about what the person is currently focused on.
+    /// Plain-text version of the profile about section.
     /// </summary>
-    [StringLength(300)]
-    public string? Focus { get; set; }
+    /// <remarks>
+    /// This text is useful for previews, search, summaries, and any place where HTML should not be rendered.
+    /// The formatted public profile page should use <see cref="AboutContentHtml"/> when available.
+    /// </remarks>
+    public string? AboutContentText { get; set; }
 
     /// <summary>
-    /// Public URL of the profile avatar image uploaded by the frontend.
+    /// Rich HTML version of the profile about section.
+    /// </summary>
+    /// <remarks>
+    /// This content is produced by the frontend editor and may include formatted paragraphs, links, lists,
+    /// and uploaded image URLs. Do not use this field in plain-text previews without sanitising or stripping HTML.
+    /// </remarks>
+    public string? AboutContentHtml { get; set; }
+
+    /// <summary>
+    /// Short statement about what the person is currently working on or trying to build.
+    /// </summary>
+    /// <remarks>
+    /// This powers sections such as "Current focus" on public profile designs.
+    /// </remarks>
+    public string? CurrentFocus { get; set; }
+
+    /// <summary>
+    /// Public URL of the profile image uploaded by the frontend.
     /// </summary>
     /// <remarks>
     /// The API stores only the final URL. File upload and storage are handled by the frontend.
     /// </remarks>
-    public string? AvatarUrl { get; set; }
+    public string? ProfileImageUrl { get; set; }
 
     /// <summary>
     /// Public URL of the cover image shown on public profile pages.
@@ -159,3 +186,7 @@ public class Profile
     /// </remarks>
     public List<BlogPost> BlogPosts { get; set; } = [];
 }
+
+
+
+

@@ -1,14 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using PortfolioPlatform.Api.Data;
+using PortfolioPlatform.Api.Dtos.Auth;
 using PortfolioPlatform.Api.Dtos.Users;
 using PortfolioPlatform.Api.Exceptions;
+using PortfolioPlatform.Api.Services.Abstractions.Auth;
 using PortfolioPlatform.Api.Services.Abstractions.Users;
 
 namespace PortfolioPlatform.Api.Services.Implementations.Users;
 
-public class UserService(ApplicationDbContext context) : IUserService
+public class UserService(ApplicationDbContext context, IAuthService authService) : IUserService
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly IAuthService _authService = authService;
 
     /// <inheritdoc/>
     public async Task<UserDto> GetByIdAsync(int id)
@@ -23,6 +26,7 @@ public class UserService(ApplicationDbContext context) : IUserService
                 Name = u.Name,
                 Username = u.Username,
                 Email = u.Email,
+                PendingEmail = u.PendingEmail,
                 Bio = u.Bio,
                 Role = u.Role,
                 IsVerified = u.IsVerified,
@@ -69,6 +73,46 @@ public class UserService(ApplicationDbContext context) : IUserService
         user.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateEmailAsync(int userId, UpdateEmailDto dto)
+    {
+        // Retrieve the account first so the pending email can only be attached to
+        // the authenticated user who requested the change.
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new KeyNotFoundException($@"User with ID '{userId}' does not exist.");
+
+        string requestedEmail = dto.Email.Trim();
+
+        // If the submitted email is already the active email, there is nothing to verify.
+        if (user.Email.Equals(requestedEmail, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        // Do not allow two accounts to claim the same active or pending email address.
+        bool emailAlreadyInUse = await _context
+            .Users
+            .AnyAsync(u =>
+                u.Id != userId
+                && (
+                    u.Email.ToLower() == requestedEmail.ToLower()
+                    || (u.PendingEmail != null && u.PendingEmail.ToLower() == requestedEmail.ToLower())
+                )
+            );
+
+        if (emailAlreadyInUse)
+            throw new ConflictException("An account with this email already exists.");
+
+        // Store the new address separately until the user proves they can receive mail there.
+        user.PendingEmail = requestedEmail;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Reuse the same OTP email flow as normal verification so the frontend can send
+        // the user to the existing email-verification screen after this request succeeds.
+        await _authService.RequestVerificationEmailAsync(
+            new EmailVerificationRequestDto { Email = requestedEmail }
+        );
     }
 
     /// <inheritdoc/>

@@ -219,31 +219,37 @@ public class AuthService(
     /// <inheritdoc/>
     public async Task RequestVerificationEmailAsync(EmailVerificationRequestDto dto)
     {
+        string requestedEmail = dto.Email.Trim();
+
         User? existingUser = await _context
             .Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == dto.Email.ToLower());
+            .FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == requestedEmail.ToLower()
+                || (u.PendingEmail != null && u.PendingEmail.ToLower() == requestedEmail.ToLower())
+            );
 
         // Avoid failing hard when a verification request is made for an unknown email.
         if (existingUser is null)
         {
             _logger.LogWarning(
                 "Email verification request ignored: user with email {Email} does not exist.",
-                dto.Email
+                requestedEmail
             );
 
             return;
         }
 
-        if (existingUser.IsVerified)
+        // A fully verified account with no pending email has nothing else to confirm.
+        if (existingUser.IsVerified && existingUser.PendingEmail is null)
         {
-            _logger.LogWarning("Verification not required: email {Email} is already confirmed.", dto.Email);
+            _logger.LogWarning("Verification not required: email {Email} is already confirmed.", requestedEmail);
             return;
         }
 
         bool isEligible = await CanRequestOtpAsync(
             userId: existingUser.Id,
-            email: existingUser.Email,
+            email: requestedEmail,
             purpose: OtpPurpose.EmailVerification,
             maxRequestsPerUser: 5,
             maxRequestsPerEmail: 5
@@ -262,7 +268,7 @@ public class AuthService(
         UserOtp userOtp = new()
         {
             Purpose = OtpPurpose.EmailVerification,
-            Email = dto.Email,
+            Email = requestedEmail,
             UserId = existingUser.Id,
             Otp = hashedOtp,
             ExpirationTime = DateTime.UtcNow.AddMinutes(10)
@@ -279,7 +285,7 @@ public class AuthService(
         EmailMessage emailMessage = new()
         {
             RecipientName = existingUser.Username,
-            RecipientEmail = dto.Email,
+            RecipientEmail = requestedEmail,
             Subject = "Email Confirmation",
             HtmlBody = emailTemplate
         };
@@ -288,7 +294,7 @@ public class AuthService(
 
         _logger.LogInformation(
             "Successfully sent an email verification OTP to email {Email}",
-            dto.Email
+            requestedEmail
         );
     }
 
@@ -297,17 +303,39 @@ public class AuthService(
     {
         await _otpService.VerifyAsync(verifyOtpDto);
 
+        string submittedEmail = verifyOtpDto.Email.Trim();
+
         User user = await _context
             .Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == verifyOtpDto.Email.ToLower())
+            .FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == submittedEmail.ToLower()
+                || (u.PendingEmail != null && u.PendingEmail.ToLower() == submittedEmail.ToLower())
+            )
             ?? throw new KeyNotFoundException(
-                $"Email verification failed: no user found with email '{verifyOtpDto.Email}'."
+                $"Email verification failed: no user found with email '{submittedEmail}'."
             );
 
+        // When the OTP was sent to a pending email, promote it to the primary email
+        // only after the user proves they can receive messages there.
+        if (!string.IsNullOrWhiteSpace(user.PendingEmail)
+            && user.PendingEmail.Equals(submittedEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            bool pendingEmailAlreadyInUse = await _context
+                .Users
+                .AnyAsync(u => u.Id != user.Id && u.Email.ToLower() == user.PendingEmail.ToLower());
+
+            if (pendingEmailAlreadyInUse)
+                throw new ConflictException("This email is already linked to another account.");
+
+            user.Email = user.PendingEmail;
+            user.PendingEmail = null;
+        }
+
         user.IsVerified = true;
+        user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Email verification succeeded for {Email}", verifyOtpDto.Email);
+        _logger.LogInformation("Email verification succeeded for {Email}", submittedEmail);
     }
 
     /// <inheritdoc/>
@@ -372,3 +400,4 @@ public class AuthService(
         return emailRequestCount < maxRequestsPerEmail;
     }
 }
+

@@ -24,16 +24,16 @@ public class ProjectsController(
     private readonly ILogger<ProjectsController> _logger = logger;
 
     /// <summary>
-    /// Returns all projects owned by the authenticated user.
+    /// Returns a paginated page of projects owned by the authenticated user.
     /// </summary>
     [HttpGet("me")]
     [Authorize]
-    public async Task<IActionResult> GetMine()
+    public async Task<IActionResult> GetMine([FromQuery] ProjectFilters filters)
     {
         try
         {
             int userId = GetAuthenticatedUserId();
-            List<ProjectDto> projects = await _projectService.GetMineAsync(userId);
+            PageInfo<ProjectDto> projects = await _projectService.GetMineAsync(userId, filters);
             return Ok(projects);
         }
         catch (InvalidOperationException exception)
@@ -257,5 +257,7 @@ public class ProjectsController(
         return _jwtService.ValidateTokenAndExtractUser(token).Id;
     }
 }
+
+
 
 

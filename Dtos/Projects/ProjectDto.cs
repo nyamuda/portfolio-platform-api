@@ -53,9 +53,9 @@ public class ProjectDto
     public string? ContentText { get; set; }
 
     /// <summary>
-    /// Technologies, tools, skills, or subject tags connected to the project.
+    /// Short labels that help visitors understand what the project is connected to.
     /// </summary>
-    public List<string> TechStack { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
 
     /// <summary>
     /// Public URL for the main cover image uploaded by the frontend.
@@ -128,7 +128,7 @@ public class ProjectDto
             Solution = project.Solution,
             ContentHtml = project.ContentHtml,
             ContentText = project.ContentText,
-            TechStack = project.TechStack,
+            Tags = project.Tags.Select(tag => tag.Name).ToList(),
             CoverImageUrl = project.CoverImageUrl,
             ScreenshotUrls = project.ScreenshotUrls,
             ProjectUrl = project.ProjectUrl,
@@ -143,3 +143,5 @@ public class ProjectDto
         };
     }
 }
+
+

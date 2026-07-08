@@ -33,19 +33,34 @@ public class ProfileDto
     public required string Headline { get; set; }
 
     /// <summary>
-    /// Longer profile biography.
+    /// Short supporting line shown near the profile headline.
+    /// </summary>
+    public string? Tagline { get; set; }
+
+    /// <summary>
+    /// Short plain-text profile summary used in hero sections, cards, and compact previews.
     /// </summary>
     public string? Bio { get; set; }
 
     /// <summary>
-    /// Optional current focus text.
+    /// Plain-text version of the profile about section.
     /// </summary>
-    public string? Focus { get; set; }
+    public string? AboutContentText { get; set; }
 
     /// <summary>
-    /// Avatar image URL.
+    /// Rich HTML version of the profile about section.
     /// </summary>
-    public string? AvatarUrl { get; set; }
+    public string? AboutContentHtml { get; set; }
+
+    /// <summary>
+    /// Optional text describing what the person is currently working on.
+    /// </summary>
+    public string? CurrentFocus { get; set; }
+
+    /// <summary>
+    /// Profile image URL.
+    /// </summary>
+    public string? ProfileImageUrl { get; set; }
 
     /// <summary>
     /// Cover image URL.
@@ -119,9 +134,12 @@ public class ProfileDto
             DisplayName = profile.DisplayName,
             Slug = profile.Slug,
             Headline = profile.Headline,
+            Tagline = profile.Tagline,
             Bio = profile.Bio,
-            Focus = profile.Focus,
-            AvatarUrl = profile.AvatarUrl,
+            AboutContentText = profile.AboutContentText,
+            AboutContentHtml = profile.AboutContentHtml,
+            CurrentFocus = profile.CurrentFocus,
+            ProfileImageUrl = profile.ProfileImageUrl,
             CoverImageUrl = profile.CoverImageUrl,
             Location = profile.Location,
             WebsiteUrl = profile.WebsiteUrl,

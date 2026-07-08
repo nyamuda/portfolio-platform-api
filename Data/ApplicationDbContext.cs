@@ -12,6 +12,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<Project> Projects { get; set; }
     public DbSet<BlogPost> BlogPosts { get; set; }
+    public DbSet<Tag> Tags { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,7 +65,31 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(profile => profile.BlogPosts)
             .HasForeignKey(post => post.ProfileId)
             .OnDelete(DeleteBehavior.Cascade);
+        // A Project can use multiple Tags, and a Tag can be reused by multiple Projects.
+        // Hence, there is a many-to-many relationship between Project and Tag.
+        //
+        // The join table is named explicitly so migrations produce a predictable schema.
+        // Deleting a project only removes its join rows; the shared Tag row remains available
+        // because another project or blog post may still use the same tag.
+        modelBuilder
+            .Entity<Project>()
+            .HasMany(project => project.Tags)
+            .WithMany(tag => tag.Projects)
+            .UsingEntity(join => join.ToTable("ProjectTags"));
+
+        // A BlogPost can use multiple Tags, and a Tag can be reused by multiple BlogPosts.
+        // Hence, there is a many-to-many relationship between BlogPost and Tag.
+        //
+        // This mirrors the project tag mapping above. Tags are shared vocabulary, not owned
+        // children of a single post, so removing a post should not delete the tag itself.
+        modelBuilder
+            .Entity<BlogPost>()
+            .HasMany(post => post.Tags)
+            .WithMany(tag => tag.BlogPosts)
+            .UsingEntity(join => join.ToTable("BlogPostTags"));
     }
 }
+
+
 
 

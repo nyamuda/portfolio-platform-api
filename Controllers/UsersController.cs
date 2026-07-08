@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PortfolioPlatform.Api.Dtos.Auth;
 using PortfolioPlatform.Api.Dtos.Users;
 using PortfolioPlatform.Api.Exceptions;
 using PortfolioPlatform.Api.Models;
@@ -25,14 +26,7 @@ public class UsersController(IUserService userService, IJwtService jwtService) :
     {
         try
         {
-            string token = HttpContext
-                .Request
-                .Headers
-                .Authorization
-                .ToString()
-                .Replace("Bearer ", "");
-
-            int userId = _jwtService.ValidateTokenAndExtractUser(token).Id;
+            int userId = GetAuthenticatedUserId();
 
             if (userId != id)
                 return StatusCode(403, ErrorResponse.Forbidden());
@@ -87,14 +81,7 @@ public class UsersController(IUserService userService, IJwtService jwtService) :
     {
         try
         {
-            string token = HttpContext
-                .Request
-                .Headers
-                .Authorization
-                .ToString()
-                .Replace("Bearer ", "");
-
-            int userId = _jwtService.ValidateTokenAndExtractUser(token).Id;
+            int userId = GetAuthenticatedUserId();
 
             await _userService.UpdateProfileAsync(userId, dto);
             return NoContent();
@@ -102,6 +89,43 @@ public class UsersController(IUserService userService, IJwtService jwtService) :
         catch (KeyNotFoundException ex)
         {
             return NotFound(ErrorResponse.Create(ex.Message));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(ErrorResponse.Create(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ErrorResponse.Unexpected(details: ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Starts an email change for the authenticated user.
+    /// </summary>
+    /// <param name="dto">The requested email address.</param>
+    [HttpPatch("email")]
+    [Authorize]
+    public async Task<IActionResult> UpdateEmail(UpdateEmailDto dto)
+    {
+        try
+        {
+            int userId = GetAuthenticatedUserId();
+
+            await _userService.UpdateEmailAsync(userId, dto);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ErrorResponse.Create(ex.Message));
+        }
+        catch (ConflictException ex)
+        {
+            return StatusCode(409, ErrorResponse.Create(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ErrorResponse.Create(ex.Message));
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -123,14 +147,7 @@ public class UsersController(IUserService userService, IJwtService jwtService) :
     {
         try
         {
-            string token = HttpContext
-                .Request
-                .Headers
-                .Authorization
-                .ToString()
-                .Replace("Bearer ", "");
-
-            int userId = _jwtService.ValidateTokenAndExtractUser(token).Id;
+            int userId = GetAuthenticatedUserId();
 
             await _userService.UpdateUsernameAsync(userId, dto);
             return NoContent();
@@ -151,5 +168,24 @@ public class UsersController(IUserService userService, IJwtService jwtService) :
         {
             return StatusCode(500, ErrorResponse.Unexpected(details: ex.Message));
         }
+    }
+
+    /// <summary>
+    /// Extracts the authenticated user id from the bearer token on the current request.
+    /// </summary>
+    /// <remarks>
+    /// Keeping this small helper here avoids repeating the token extraction block in
+    /// every protected account endpoint, while still following the existing JWT service flow.
+    /// </remarks>
+    private int GetAuthenticatedUserId()
+    {
+        string token = HttpContext
+            .Request
+            .Headers
+            .Authorization
+            .ToString()
+            .Replace("Bearer ", "");
+
+        return _jwtService.ValidateTokenAndExtractUser(token).Id;
     }
 }

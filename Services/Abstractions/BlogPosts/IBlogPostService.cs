@@ -1,4 +1,5 @@
 using PortfolioPlatform.Api.Dtos.BlogPosts;
+using PortfolioPlatform.Api.Models;
 
 namespace PortfolioPlatform.Api.Services.Abstractions.BlogPosts;
 
@@ -11,8 +12,8 @@ public interface IBlogPostService
     /// Returns all blog posts owned by the authenticated user, including drafts.
     /// </summary>
     /// <param name="userId">The authenticated user's identifier.</param>
-    /// <returns>Blog posts owned by the user's profile.</returns>
-    Task<List<BlogPostDto>> GetMineAsync(int userId);
+    /// <returns>A paginated page of blog posts owned by the user's profile.</returns>
+    Task<PageInfo<BlogPostDto>> GetMineAsync(int userId, BlogPostFilters filters);
 
     /// <summary>
     /// Returns one blog post owned by the authenticated user.
@@ -61,4 +62,6 @@ public interface IBlogPostService
     /// <param name="postId">The blog post identifier.</param>
     Task DeleteAsync(int userId, int postId);
 }
+
+
 

@@ -72,7 +72,7 @@ public class BlogPost
     /// <summary>
     /// Tags connected to the post.
     /// </summary>
-    public List<string> Tags { get; set; } = [];
+    public List<Tag> Tags { get; set; } = [];
 
     /// <summary>
     /// Public URL of the cover image uploaded by the frontend.
@@ -123,3 +123,4 @@ public class BlogPost
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 }
+

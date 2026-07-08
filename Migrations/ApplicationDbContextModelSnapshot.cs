@@ -23,6 +23,21 @@ namespace PortfolioPlatform.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BlogPostTag", b =>
+                {
+                    b.Property<int>("BlogPostsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BlogPostsId", "TagsId");
+
+                    b.HasIndex("TagsId");
+
+                    b.ToTable("BlogPostTags", (string)null);
+                });
+
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.BlogPost", b =>
                 {
                     b.Property<int>("Id")
@@ -77,10 +92,6 @@ namespace PortfolioPlatform.Api.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
-
-                    b.PrimitiveCollection<List<string>>("Tags")
-                        .IsRequired()
-                        .HasColumnType("text[]");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -168,10 +179,6 @@ namespace PortfolioPlatform.Api.Migrations
                         .HasMaxLength(420)
                         .HasColumnType("character varying(420)");
 
-                    b.PrimitiveCollection<List<string>>("TechStack")
-                        .IsRequired()
-                        .HasColumnType("text[]");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(180)
@@ -188,6 +195,55 @@ namespace PortfolioPlatform.Api.Migrations
                     b.ToTable("Projects");
                 });
 
+            modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ColorHex")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IconName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tags");
+                });
+
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Profiles.Profile", b =>
                 {
                     b.Property<int>("Id")
@@ -196,12 +252,14 @@ namespace PortfolioPlatform.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AvatarUrl")
+                    b.Property<string>("AboutContentHtml")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AboutContentText")
                         .HasColumnType("text");
 
                     b.Property<string>("Bio")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("CoverImageUrl")
                         .HasColumnType("text");
@@ -209,14 +267,13 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<string>("CurrentFocus")
+                        .HasColumnType("text");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(160)
                         .HasColumnType("character varying(160)");
-
-                    b.Property<string>("Focus")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("GitHubUrl")
                         .HasMaxLength(500)
@@ -238,6 +295,9 @@ namespace PortfolioPlatform.Api.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("character varying(160)");
 
+                    b.Property<string>("ProfileImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("SeoDescription")
                         .HasMaxLength(320)
                         .HasColumnType("character varying(320)");
@@ -250,6 +310,9 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Tagline")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -308,6 +371,10 @@ namespace PortfolioPlatform.Api.Migrations
 
                     b.Property<string>("Password")
                         .HasColumnType("text");
+
+                    b.Property<string>("PendingEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
@@ -369,6 +436,36 @@ namespace PortfolioPlatform.Api.Migrations
                     b.ToTable("UserOtps");
                 });
 
+            modelBuilder.Entity("ProjectTag", b =>
+                {
+                    b.Property<int>("ProjectsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TagsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ProjectsId", "TagsId");
+
+                    b.HasIndex("TagsId");
+
+                    b.ToTable("ProjectTags", (string)null);
+                });
+
+            modelBuilder.Entity("BlogPostTag", b =>
+                {
+                    b.HasOne("PortfolioPlatform.Api.Models.Content.BlogPost", null)
+                        .WithMany()
+                        .HasForeignKey("BlogPostsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PortfolioPlatform.Api.Models.Content.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.BlogPost", b =>
                 {
                     b.HasOne("PortfolioPlatform.Api.Models.Profiles.Profile", "Profile")
@@ -411,6 +508,21 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ProjectTag", b =>
+                {
+                    b.HasOne("PortfolioPlatform.Api.Models.Content.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PortfolioPlatform.Api.Models.Content.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Profiles.Profile", b =>

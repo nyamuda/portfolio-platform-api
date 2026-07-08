@@ -107,7 +107,7 @@ public class BlogPostDto
             ContentHtml = post.ContentHtml,
             ContentText = post.ContentText,
             Category = post.Category,
-            Tags = post.Tags,
+            Tags = post.Tags.Select(tag => tag.Name).ToList(),
             CoverImageUrl = post.CoverImageUrl,
             SortOrder = post.SortOrder,
             IsFeatured = post.IsFeatured,
@@ -119,3 +119,4 @@ public class BlogPostDto
         };
     }
 }
+

@@ -24,16 +24,16 @@ public class BlogPostsController(
     private readonly ILogger<BlogPostsController> _logger = logger;
 
     /// <summary>
-    /// Returns all blog posts owned by the authenticated user.
+    /// Returns a paginated page of blog posts owned by the authenticated user.
     /// </summary>
     [HttpGet("me")]
     [Authorize]
-    public async Task<IActionResult> GetMine()
+    public async Task<IActionResult> GetMine([FromQuery] BlogPostFilters filters)
     {
         try
         {
             int userId = GetAuthenticatedUserId();
-            List<BlogPostDto> posts = await _blogPostService.GetMineAsync(userId);
+            PageInfo<BlogPostDto> posts = await _blogPostService.GetMineAsync(userId, filters);
             return Ok(posts);
         }
         catch (InvalidOperationException exception)
@@ -248,5 +248,7 @@ public class BlogPostsController(
         return _jwtService.ValidateTokenAndExtractUser(token).Id;
     }
 }
+
+
 
 

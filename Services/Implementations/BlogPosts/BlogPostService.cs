@@ -1,42 +1,59 @@
 using Microsoft.EntityFrameworkCore;
 using PortfolioPlatform.Api.Data;
 using PortfolioPlatform.Api.Dtos.BlogPosts;
+using PortfolioPlatform.Api.Enums.BlogPosts;
 using PortfolioPlatform.Api.Exceptions;
+using PortfolioPlatform.Api.Models;
 using PortfolioPlatform.Api.Models.Content;
 using PortfolioPlatform.Api.Services.Abstractions.BlogPosts;
+using PortfolioPlatform.Api.Services.Abstractions.Tags;
 
 namespace PortfolioPlatform.Api.Services.Implementations.BlogPosts;
 
 /// <summary>
 /// Handles blog post management for profile owners and public visitors.
 /// </summary>
-public class BlogPostService(ApplicationDbContext context) : IBlogPostService
+public class BlogPostService(ApplicationDbContext context, ITagService tagService) : IBlogPostService
 {
     private readonly ApplicationDbContext _context = context;
-
+    private readonly ITagService _tagService = tagService;
     /// <inheritdoc/>
-    public async Task<List<BlogPostDto>> GetMineAsync(int userId)
+    public async Task<PageInfo<BlogPostDto>> GetMineAsync(int userId, BlogPostFilters filters)
     {
         // Blog posts belong to profiles, not directly to users. This lookup also proves ownership.
         int profileId = await GetOwnedProfileIdAsync(userId);
 
+        // Keep pagination defensive. The frontend owns the controls, but the API should still protect itself.
+        int page = Math.Max(filters.Page, 1);
+        int pageSize = Math.Clamp(filters.PageSize, 1, 50);
+
         // Owner reads include drafts because the editor and dashboard need to show unfinished posts.
         // Public endpoints apply stricter filters separately, so drafts do not leak to visitors.
-        return await BlogPostDtos(
-                _context
-                    .BlogPosts
-                    .AsNoTracking()
-                    .Where(post => post.ProfileId == profileId)
-            )
-            // Featured posts should float to the top in owner views so they are easy to manage.
-            .OrderByDescending(post => post.IsFeatured)
-            // SortOrder gives the owner manual control when several posts are featured or pinned.
-            .ThenBy(post => post.SortOrder)
-            // Newer posts should appear first when the manual ordering is the same.
-            .ThenByDescending(post => post.CreatedAt)
-            .ToListAsync();
-    }
+        IQueryable<BlogPost> query = _context
+            .BlogPosts
+            .AsNoTracking()
+            .Where(post => post.ProfileId == profileId);
 
+        // Filters are applied before the count so the paginator describes the visible result set.
+        query = ApplyBlogPostFilters(query, filters);
+        int totalItems = await query.CountAsync();
+
+        // Sorting is applied after filtering, then the requested page is projected into DTOs.
+        query = ApplyBlogPostSort(query, filters.SortBy);
+        List<BlogPostDto> posts = await BlogPostDtos(query)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PageInfo<BlogPostDto>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            HasMore = totalItems > page * pageSize,
+            Items = posts
+        };
+    }
     /// <inheritdoc/>
     public async Task<BlogPostDto> GetMineByIdAsync(int userId, int postId)
     {
@@ -120,6 +137,10 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
         // Reuse the same field assignment path as updates so create/update behavior stays consistent.
         ApplyChanges(post, dto);
 
+        // Resolve the submitted tag names into shared Tag rows before the first save.
+        // This keeps the public model relational while allowing forms to submit simple strings.
+        await UpdateBlogPostTagsAsync(post, dto.Tags);
+
         _context.BlogPosts.Add(post);
         await _context.SaveChangesAsync();
 
@@ -135,6 +156,7 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
 
         BlogPost post = await _context
             .BlogPosts
+            .Include(post => post.Tags)
             .FirstOrDefaultAsync(post => post.Id == postId && post.ProfileId == profileId)
             ?? throw new KeyNotFoundException($"Blog post with ID '{postId}' was not found.");
 
@@ -143,6 +165,9 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
 
         // Keep all editable field assignments together so we do not forget fields between create and update.
         ApplyChanges(post, dto);
+
+        // Keep the tag collection in sync with the names submitted by the editor.
+        await UpdateBlogPostTagsAsync(post, dto.Tags);
         post.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -159,6 +184,7 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
 
         BlogPost post = await _context
             .BlogPosts
+            .Include(post => post.Tags)
             .FirstOrDefaultAsync(post => post.Id == postId && post.ProfileId == profileId)
             ?? throw new KeyNotFoundException($"Blog post with ID '{postId}' was not found.");
 
@@ -171,6 +197,77 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
     /// </summary>
     /// <param name="query">The blog post query after ownership or public visibility filters have already been applied.</param>
     /// <returns>A projected query that returns blog post DTOs.</returns>
+    /// <summary>
+    /// Applies owner-list filters to a blog post query before pagination.
+    /// </summary>
+    /// <param name="query">The blog post query scoped to the authenticated user's profile.</param>
+    /// <param name="filters">The filters requested by the owner-facing blog post list.</param>
+    /// <returns>The filtered blog post query.</returns>
+    private static IQueryable<BlogPost> ApplyBlogPostFilters(IQueryable<BlogPost> query, BlogPostFilters filters)
+    {
+        // Status is an owner-only filter. Drafts should stay available here, but the owner can hide them.
+        query = filters.Status switch
+        {
+            BlogPostStatus.Published => query.Where(post => post.IsPublished),
+            BlogPostStatus.Draft => query.Where(post => !post.IsPublished),
+            _ => query
+        };
+
+        // Featured filtering helps owners quickly check which posts are being highlighted publicly.
+        query = filters.Featured switch
+        {
+            BlogPostFeaturedFilter.Featured => query.Where(post => post.IsFeatured),
+            BlogPostFeaturedFilter.Regular => query.Where(post => !post.IsFeatured),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
+        {
+            string searchTerm = filters.SearchTerm.Trim().ToLower();
+
+            // Keep the search broad enough for management screens without pulling the post body into memory.
+            query = query.Where(post =>
+                post.Title.ToLower().Contains(searchTerm)
+                || post.Excerpt.ToLower().Contains(searchTerm)
+                || (post.Category != null && post.Category.ToLower().Contains(searchTerm))
+                || (post.ContentText != null && post.ContentText.ToLower().Contains(searchTerm))
+                || post.Tags.Any(tag => tag.Name.ToLower().Contains(searchTerm))
+            );
+        }
+
+        return query;
+    }
+
+    /// <summary>
+    /// Applies the selected owner-list sort order to a blog post query.
+    /// </summary>
+    /// <param name="query">The filtered blog post query.</param>
+    /// <param name="sortOption">The sort option selected by the owner.</param>
+    /// <returns>The ordered blog post query.</returns>
+    private static IQueryable<BlogPost> ApplyBlogPostSort(IQueryable<BlogPost> query, BlogPostSortOption sortOption)
+    {
+        return sortOption switch
+        {
+            // Manual keeps featured posts first, then respects the owner's SortOrder value.
+            BlogPostSortOption.Manual => query
+                .OrderByDescending(post => post.IsFeatured)
+                .ThenBy(post => post.SortOrder)
+                .ThenBy(post => post.Title),
+
+            // Title sorting is useful when the owner is quickly scanning a larger archive.
+            BlogPostSortOption.Title => query.OrderBy(post => post.Title),
+
+            // Oldest is helpful when cleaning up early drafts or older writing.
+            BlogPostSortOption.Oldest => query
+                .OrderBy(post => post.UpdatedAt ?? post.CreatedAt)
+                .ThenBy(post => post.Title),
+
+            // Recent is the default because new or recently edited posts are usually what the owner needs first.
+            _ => query
+                .OrderByDescending(post => post.UpdatedAt ?? post.CreatedAt)
+                .ThenBy(post => post.Title)
+        };
+    }
     private static IQueryable<BlogPostDto> BlogPostDtos(IQueryable<BlogPost> query)
     {
         // This method centralizes the projection so all blog endpoints return the same shape.
@@ -185,7 +282,7 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
             ContentHtml = post.ContentHtml,
             ContentText = post.ContentText,
             Category = post.Category,
-            Tags = post.Tags,
+            Tags = post.Tags.Select(tag => tag.Name).ToList(),
             CoverImageUrl = post.CoverImageUrl,
             SortOrder = post.SortOrder,
             IsFeatured = post.IsFeatured,
@@ -243,6 +340,40 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
     }
 
     /// <summary>
+    /// Synchronises a blog post's tag collection with the tag names submitted by the editor.
+    /// </summary>
+    /// <param name="post">The tracked blog post whose tag collection should be updated.</param>
+    /// <param name="newTagNames">The tag names submitted by the form.</param>
+    private async Task UpdateBlogPostTagsAsync(BlogPost post, List<string> newTagNames)
+    {
+        // Remove blank entries and collapse duplicates such as "Vue" and "vue" before touching the database.
+        List<string> cleanedTagNames = newTagNames
+            .Where(tagName => !string.IsNullOrWhiteSpace(tagName))
+            .Select(tagName => tagName.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Remove tag links that are no longer present in the submitted list.
+        // The Tag rows themselves stay in the database because other projects or posts may still use them.
+        foreach (Tag tag in post.Tags.ToList())
+        {
+            if (!cleanedTagNames.Any(tagName => tagName.Equals(tag.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                post.Tags.Remove(tag);
+            }
+        }
+
+        // Add any new tag names by reusing existing Tag rows when possible.
+        foreach (string tagName in cleanedTagNames)
+        {
+            if (post.Tags.Any(tag => tag.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            Tag tag = await _tagService.GetByNameAsync(tagName); // creates the tag if this is the first use
+            post.Tags.Add(tag);
+        }
+    }
+    /// <summary>
     /// Copies editable fields from the incoming DTO onto a blog post entity.
     /// </summary>
     /// <param name="post">The blog post entity being created or updated.</param>
@@ -262,7 +393,7 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
 
         // Category and tags are lightweight organization fields. They are intentionally optional.
         post.Category = dto.Category;
-        post.Tags = dto.Tags;
+        // Tags are attached through ITagService so the same tag rows can be reused across content.
 
         // The API stores only the final URL. Actual file uploads are handled by the frontend.
         post.CoverImageUrl = dto.CoverImageUrl;
@@ -277,4 +408,10 @@ public class BlogPostService(ApplicationDbContext context) : IBlogPostService
         post.SeoDescription = dto.SeoDescription;
     }
 }
+
+
+
+
+
+
 

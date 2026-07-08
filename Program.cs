@@ -16,6 +16,7 @@ using PortfolioPlatform.Api.Services.Abstractions.Dashboard;
 using PortfolioPlatform.Api.Services.Abstractions.Email;
 using PortfolioPlatform.Api.Services.Abstractions.Profiles;
 using PortfolioPlatform.Api.Services.Abstractions.Projects;
+using PortfolioPlatform.Api.Services.Abstractions.Tags;
 using PortfolioPlatform.Api.Services.Abstractions.Users;
 using PortfolioPlatform.Api.Services.Implementations.Auth;
 using PortfolioPlatform.Api.Services.Implementations.Auth.OAuth;
@@ -25,6 +26,7 @@ using PortfolioPlatform.Api.Services.Implementations.Dashboard;
 using PortfolioPlatform.Api.Services.Implementations.Email;
 using PortfolioPlatform.Api.Services.Implementations.Profiles;
 using PortfolioPlatform.Api.Services.Implementations.Projects;
+using PortfolioPlatform.Api.Services.Implementations.Tags;
 using PortfolioPlatform.Api.Services.Implementations.Users;
 using Scalar.AspNetCore;
 
@@ -43,6 +45,7 @@ builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddScoped<IBlogPostService, BlogPostService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 string connectionString =
@@ -54,7 +57,15 @@ string connectionString =
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.Configure<Company>(builder.Configuration.GetSection("Company"));
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+// Prefer the same nested SMTP section used by the account/authentication settings.
+// The root-level fallback keeps older local appsettings files working while the
+// project is still being wired up.
+IConfigurationSection smtpSettingsSection = builder.Configuration.GetSection("Authentication:SmtpSettings");
+if (!smtpSettingsSection.Exists())
+{
+    smtpSettingsSection = builder.Configuration.GetSection("SmtpSettings");
+}
+builder.Services.Configure<SmtpSettings>(smtpSettingsSection);
 builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection("Authentication:OAuth:Google"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Authentication:JwtSettings"));
 
@@ -146,6 +157,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
 
 
 

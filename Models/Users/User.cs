@@ -39,6 +39,16 @@ public class User
     public required string Email { get; set; }
 
     /// <summary>
+    /// New email address waiting for verification before it replaces <see cref="Email" />.
+    /// </summary>
+    /// <remarks>
+    /// Email changes are staged here so a user cannot accidentally lose access to the
+    /// current sign-in email before proving they own the new address.
+    /// </remarks>
+    [StringLength(256)]
+    public string? PendingEmail { get; set; }
+
+    /// <summary>
     /// BCrypt hash of the local account password.
     /// </summary>
     /// <remarks>
@@ -98,3 +108,4 @@ public class User
     /// </summary>
     public List<UserOtp> UserOtps { get; set; } = [];
 }
+

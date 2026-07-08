@@ -52,9 +52,9 @@ public class UpsertProjectDto
     public string? ContentText { get; set; }
 
     /// <summary>
-    /// Technologies, tools, or skills used in the project.
+    /// Short labels for the project, such as tools, skills, subjects, or themes.
     /// </summary>
-    public List<string> TechStack { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
 
     /// <summary>
     /// Cover image URL uploaded by the frontend.
@@ -105,3 +105,4 @@ public class UpsertProjectDto
     [StringLength(320)]
     public string? SeoDescription { get; set; }
 }
+

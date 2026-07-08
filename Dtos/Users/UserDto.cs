@@ -1,4 +1,4 @@
-﻿using PortfolioPlatform.Api.Enums;
+using PortfolioPlatform.Api.Enums;
 using PortfolioPlatform.Api.Models.Users;
 
 namespace PortfolioPlatform.Api.Dtos.Users;
@@ -27,6 +27,11 @@ public class UserDto
     /// Registered email address. Only return this in account-owned contexts.
     /// </summary>
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Email address waiting for verification before it becomes the active account email.
+    /// </summary>
+    public string? PendingEmail { get; set; }
 
     /// <summary>
     /// Optional short biography for public profile display.
@@ -59,6 +64,7 @@ public class UserDto
             Name = user.Name,
             Username = user.Username,
             Email = user.Email,
+            PendingEmail = user.PendingEmail,
             Bio = user.Bio,
             Role = user.Role,
             IsVerified = user.IsVerified,

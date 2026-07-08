@@ -29,7 +29,7 @@ public class DashboardService(ApplicationDbContext context) : IDashboardService
                 DisplayName = profile.DisplayName,
                 Headline = profile.Headline,
                 Bio = profile.Bio,
-                AvatarUrl = profile.AvatarUrl,
+                ProfileImageUrl = profile.ProfileImageUrl,
                 CoverImageUrl = profile.CoverImageUrl,
                 WebsiteUrl = profile.WebsiteUrl,
                 LinkedInUrl = profile.LinkedInUrl,
@@ -100,7 +100,7 @@ public class DashboardService(ApplicationDbContext context) : IDashboardService
         if (!string.IsNullOrWhiteSpace(profile.Bio)) completed++;
 
         // Visual identity makes the public profile feel finished and trustworthy.
-        if (!string.IsNullOrWhiteSpace(profile.AvatarUrl)) completed++;
+        if (!string.IsNullOrWhiteSpace(profile.ProfileImageUrl)) completed++;
         if (!string.IsNullOrWhiteSpace(profile.CoverImageUrl)) completed++;
 
         // External links help employers, clients, parents, or collaborators verify the person behind the profile.
@@ -162,7 +162,7 @@ public class DashboardService(ApplicationDbContext context) : IDashboardService
         public string? DisplayName { get; set; }
         public string? Headline { get; set; }
         public string? Bio { get; set; }
-        public string? AvatarUrl { get; set; }
+        public string? ProfileImageUrl { get; set; }
         public string? CoverImageUrl { get; set; }
         public string? WebsiteUrl { get; set; }
         public string? LinkedInUrl { get; set; }
@@ -176,5 +176,7 @@ public class DashboardService(ApplicationDbContext context) : IDashboardService
         public int DraftBlogPosts { get; set; }
     }
 }
+
+
 
 
