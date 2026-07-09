@@ -39,11 +39,11 @@ public class UpsertBlogPostDto
     /// </summary>
     public string? ContentText { get; set; }
 
+
     /// <summary>
-    /// Optional topic/category label.
+    /// Optional managed topic selected for the post.
     /// </summary>
-    [StringLength(120)]
-    public string? Category { get; set; }
+    public int? TopicId { get; set; }
 
     /// <summary>
     /// Tags connected to the post.

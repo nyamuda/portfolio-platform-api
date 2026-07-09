@@ -63,11 +63,16 @@ public class BlogPost
     /// </summary>
     public string? ContentText { get; set; }
 
+
     /// <summary>
-    /// Optional topic or category label used to group related posts.
+    /// Optional managed topic used as the post's primary grouping.
     /// </summary>
-    [StringLength(120)]
-    public string? Category { get; set; }
+    public int? TopicId { get; set; }
+
+    /// <summary>
+    /// Managed topic assigned to this post, when one has been selected.
+    /// </summary>
+    public Topic? Topic { get; set; }
 
     /// <summary>
     /// Tags connected to the post.

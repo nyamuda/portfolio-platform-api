@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using PortfolioPlatform.Api.Data.Seeders;
 using PortfolioPlatform.Api.Models.Content;
 using PortfolioPlatform.Api.Models.Profiles;
 using PortfolioPlatform.Api.Models.Users;
 
 namespace PortfolioPlatform.Api.Data;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    : DbContext(options)
 {
     public DbSet<User> Users { get; set; }
     public DbSet<UserOtp> UserOtps { get; set; }
@@ -13,6 +15,30 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Project> Projects { get; set; }
     public DbSet<BlogPost> BlogPosts { get; set; }
     public DbSet<Tag> Tags { get; set; }
+    public DbSet<Topic> Topics { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        optionsBuilder
+            .UseSeeding(
+                (context, _) =>
+                {
+                    // Keep seed registration in the DbContext so EF tooling, migrations, and
+                    // EnsureCreated all run the same initialization logic.
+                    CommonTopicSeeder.Seed(context);
+                }
+            )
+            .UseAsyncSeeding(
+                async (context, _, cancellationToken) =>
+                {
+                    // The async path mirrors the sync path. EF tooling relies on the sync version,
+                    // but runtime code may call the async version during database initialization.
+                    await CommonTopicSeeder.SeedAsync(context, cancellationToken);
+                }
+            );
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +103,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(tag => tag.Projects)
             .UsingEntity(join => join.ToTable("ProjectTags"));
 
+        // A BlogPost can optionally belong to one managed Topic while a Topic can group many BlogPosts.
+        // Topic is deliberately optional because and writers should be able to draft a post before choosing a final topic.
+        modelBuilder
+            .Entity<BlogPost>()
+            .HasOne(post => post.Topic)
+            .WithMany(topic => topic.BlogPosts)
+            .HasForeignKey(post => post.TopicId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // A BlogPost can use multiple Tags, and a Tag can be reused by multiple BlogPosts.
         // Hence, there is a many-to-many relationship between BlogPost and Tag.
         //
@@ -89,7 +124,3 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .UsingEntity(join => join.ToTable("BlogPostTags"));
     }
 }
-
-
-
-

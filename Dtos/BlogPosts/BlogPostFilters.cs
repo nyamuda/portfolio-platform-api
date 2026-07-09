@@ -8,9 +8,14 @@ namespace PortfolioPlatform.Api.Dtos.BlogPosts;
 public class BlogPostFilters
 {
     /// <summary>
-    /// Optional text used to match post title, excerpt, category, or content text.
+    /// Optional text used to match post title, excerpt, topic, tag, or content text.
     /// </summary>
     public string? SearchTerm { get; set; }
+
+    /// <summary>
+    /// Optional managed topic filter.
+    /// </summary>
+    public int? TopicId { get; set; }
 
     /// <summary>
     /// Publication state to include in the result set.

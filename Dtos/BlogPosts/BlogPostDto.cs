@@ -42,10 +42,21 @@ public class BlogPostDto
     /// </summary>
     public string? ContentText { get; set; }
 
+
     /// <summary>
-    /// Optional topic/category label.
+    /// Identifier of the managed topic assigned to the post.
     /// </summary>
-    public string? Category { get; set; }
+    public int? TopicId { get; set; }
+
+    /// <summary>
+    /// Display name of the managed topic assigned to the post.
+    /// </summary>
+    public string? TopicName { get; set; }
+
+    /// <summary>
+    /// URL-friendly slug of the managed topic assigned to the post.
+    /// </summary>
+    public string? TopicSlug { get; set; }
 
     /// <summary>
     /// Tags connected to the post.
@@ -106,7 +117,9 @@ public class BlogPostDto
             Excerpt = post.Excerpt,
             ContentHtml = post.ContentHtml,
             ContentText = post.ContentText,
-            Category = post.Category,
+            TopicId = post.TopicId,
+            TopicName = post.Topic != null ? post.Topic.Name : null,
+            TopicSlug = post.Topic != null ? post.Topic.Slug : null,
             Tags = post.Tags.Select(tag => tag.Name).ToList(),
             CoverImageUrl = post.CoverImageUrl,
             SortOrder = post.SortOrder,

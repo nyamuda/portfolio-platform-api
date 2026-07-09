@@ -17,6 +17,7 @@ using PortfolioPlatform.Api.Services.Abstractions.Email;
 using PortfolioPlatform.Api.Services.Abstractions.Profiles;
 using PortfolioPlatform.Api.Services.Abstractions.Projects;
 using PortfolioPlatform.Api.Services.Abstractions.Tags;
+using PortfolioPlatform.Api.Services.Abstractions.Topics;
 using PortfolioPlatform.Api.Services.Abstractions.Users;
 using PortfolioPlatform.Api.Services.Implementations.Auth;
 using PortfolioPlatform.Api.Services.Implementations.Auth.OAuth;
@@ -27,6 +28,7 @@ using PortfolioPlatform.Api.Services.Implementations.Email;
 using PortfolioPlatform.Api.Services.Implementations.Profiles;
 using PortfolioPlatform.Api.Services.Implementations.Projects;
 using PortfolioPlatform.Api.Services.Implementations.Tags;
+using PortfolioPlatform.Api.Services.Implementations.Topics;
 using PortfolioPlatform.Api.Services.Implementations.Users;
 using Scalar.AspNetCore;
 
@@ -46,6 +48,7 @@ builder.Services.AddScoped<IBlogPostService, BlogPostService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<ITopicService, TopicService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 string connectionString =
@@ -157,9 +160,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-
-
-
-
-

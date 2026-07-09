@@ -124,6 +124,9 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
         // Slugs become public URLs, so we stop duplicates before inserting the record.
         await EnsureSlugIsAvailableAsync(profileId, dto.Slug);
 
+        // Topic selection is optional, but when a topic id is supplied it should point to a real topic.
+        await EnsureTopicExistsAsync(dto.TopicId);
+
         // Set the required identity fields first. ApplyChanges fills the editable content fields below.
         BlogPost post = new()
         {
@@ -162,6 +165,9 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
 
         // The current post is excluded from this check so a user can save without changing the slug.
         await EnsureSlugIsAvailableAsync(profileId, dto.Slug, postId);
+
+        // Topic selection is optional, but stale topic ids should be rejected before saving.
+        await EnsureTopicExistsAsync(dto.TopicId);
 
         // Keep all editable field assignments together so we do not forget fields between create and update.
         ApplyChanges(post, dto);
@@ -221,6 +227,12 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
             _ => query
         };
 
+        if (filters.TopicId.HasValue)
+        {
+            // Topic filters are useful once a writer has a larger archive and wants to focus on one writing area.
+            query = query.Where(post => post.TopicId == filters.TopicId.Value);
+        }
+
         if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
         {
             string searchTerm = filters.SearchTerm.Trim().ToLower();
@@ -229,7 +241,7 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
             query = query.Where(post =>
                 post.Title.ToLower().Contains(searchTerm)
                 || post.Excerpt.ToLower().Contains(searchTerm)
-                || (post.Category != null && post.Category.ToLower().Contains(searchTerm))
+                || (post.Topic != null && post.Topic.Name.ToLower().Contains(searchTerm))
                 || (post.ContentText != null && post.ContentText.ToLower().Contains(searchTerm))
                 || post.Tags.Any(tag => tag.Name.ToLower().Contains(searchTerm))
             );
@@ -281,7 +293,9 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
             Excerpt = post.Excerpt,
             ContentHtml = post.ContentHtml,
             ContentText = post.ContentText,
-            Category = post.Category,
+            TopicId = post.TopicId,
+            TopicName = post.Topic != null ? post.Topic.Name : null,
+            TopicSlug = post.Topic != null ? post.Topic.Slug : null,
             Tags = post.Tags.Select(tag => tag.Name).ToList(),
             CoverImageUrl = post.CoverImageUrl,
             SortOrder = post.SortOrder,
@@ -340,6 +354,22 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
     }
 
     /// <summary>
+    /// Checks that an optional topic id points to an existing topic before a blog post is saved.
+    /// </summary>
+    /// <param name="topicId">The optional managed topic selected by the writer.</param>
+    private async Task EnsureTopicExistsAsync(int? topicId)
+    {
+        // No topic is perfectly valid. A writer can publish a post without choosing a topic yet.
+        if (!topicId.HasValue)
+            return;
+
+        bool topicExists = await _context.Topics.AnyAsync(topic => topic.Id == topicId.Value);
+
+        if (!topicExists)
+            throw new KeyNotFoundException($"Topic with ID '{topicId.Value}' was not found.");
+    }
+
+    /// <summary>
     /// Synchronises a blog post's tag collection with the tag names submitted by the editor.
     /// </summary>
     /// <param name="post">The tracked blog post whose tag collection should be updated.</param>
@@ -373,6 +403,7 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
             post.Tags.Add(tag);
         }
     }
+
     /// <summary>
     /// Copies editable fields from the incoming DTO onto a blog post entity.
     /// </summary>
@@ -391,8 +422,9 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
         post.ContentHtml = dto.ContentHtml;
         post.ContentText = dto.ContentText;
 
-        // Category and tags are lightweight organization fields. They are intentionally optional.
-        post.Category = dto.Category;
+        // TopicId is the managed grouping field for blog posts. It stays optional so drafts can be saved early.
+        post.TopicId = dto.TopicId;
+
         // Tags are attached through ITagService so the same tag rows can be reused across content.
 
         // The API stores only the final URL. Actual file uploads are handled by the frontend.
@@ -408,6 +440,8 @@ public class BlogPostService(ApplicationDbContext context, ITagService tagServic
         post.SeoDescription = dto.SeoDescription;
     }
 }
+
+
 
 
 
