@@ -179,6 +179,14 @@ public class Profile
     public List<Project> Projects { get; set; } = [];
 
     /// <summary>
+    /// Offerings created under this profile.
+    /// </summary>
+    /// <remarks>
+    /// The collection contains drafts and published offerings for owner views. Public services filter it.
+    /// </remarks>
+    public List<Offering> Offerings { get; set; } = [];
+
+    /// <summary>
     /// Blog posts created under this profile.
     /// </summary>
     /// <remarks>
@@ -186,6 +194,7 @@ public class Profile
     /// </remarks>
     public List<BlogPost> BlogPosts { get; set; } = [];
 }
+
 
 
 

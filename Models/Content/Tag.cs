@@ -61,6 +61,11 @@ public class Tag
     public List<Project> Projects { get; set; } = [];
 
     /// <summary>
+    /// Offerings that currently use this tag.
+    /// </summary>
+    public List<Offering> Offerings { get; set; } = [];
+
+    /// <summary>
     /// Blog posts that currently use this tag.
     /// </summary>
     public List<BlogPost> BlogPosts { get; set; } = [];
@@ -75,3 +80,4 @@ public class Tag
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 }
+

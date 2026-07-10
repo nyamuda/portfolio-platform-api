@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserOtp> UserOtps { get; set; }
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<Project> Projects { get; set; }
+    public DbSet<Offering> Offerings { get; set; }
     public DbSet<BlogPost> BlogPosts { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<Topic> Topics { get; set; }
@@ -28,6 +29,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                     // Keep seed registration in the DbContext so EF tooling, migrations, and
                     // EnsureCreated all run the same initialization logic.
                     CommonTopicSeeder.Seed(context);
+                    CommonTagSeeder.Seed(context);
                 }
             )
             .UseAsyncSeeding(
@@ -36,6 +38,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                     // The async path mirrors the sync path. EF tooling relies on the sync version,
                     // but runtime code may call the async version during database initialization.
                     await CommonTopicSeeder.SeedAsync(context, cancellationToken);
+                    await CommonTagSeeder.SeedAsync(context, cancellationToken);
                 }
             );
     }
@@ -81,6 +84,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(project => project.ProfileId)
             .OnDelete(DeleteBehavior.Cascade);
 
+
+        // A Profile can have multiple Offerings while an Offering can only belong to one Profile.
+        // Offerings are public-profile content just like projects and posts: they explain ways a
+        // visitor can work with the profile owner. If the profile is deleted, its offerings should
+        // be removed too so the database does not keep orphaned public content.
+        modelBuilder
+            .Entity<Offering>()
+            .HasOne(offering => offering.Profile)
+            .WithMany(profile => profile.Offerings)
+            .HasForeignKey(offering => offering.ProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // A Profile can have many BlogPosts while a BlogPost can only belong to one Profile.
         // Blog posts follow the same ownership rule as projects: they are public-profile content,
         // not standalone records. If the profile is deleted, its drafts and published posts should
@@ -103,8 +118,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(tag => tag.Projects)
             .UsingEntity(join => join.ToTable("ProjectTags"));
 
+
+        // An Offering can use multiple Tags, and a Tag can be reused by multiple Offerings.
+        // Hence, there is a many-to-many relationship between Offering and Tag.
+        //
+        // Tags are shared vocabulary across the platform. Removing an offering only removes its
+        // join rows; the tag itself remains available for projects, posts, and other offerings.
+        modelBuilder
+            .Entity<Offering>()
+            .HasMany(offering => offering.Tags)
+            .WithMany(tag => tag.Offerings)
+            .UsingEntity(join => join.ToTable("OfferingTags"));
+
         // A BlogPost can optionally belong to one managed Topic while a Topic can group many BlogPosts.
-        // Topic is deliberately optional because and writers should be able to draft a post before choosing a final topic.
+        // Topic is deliberately optional because writers should be able to draft a post before choosing a final topic.
         modelBuilder
             .Entity<BlogPost>()
             .HasOne(post => post.Topic)
@@ -124,3 +151,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .UsingEntity(join => join.ToTable("BlogPostTags"));
     }
 }
+
+
+
