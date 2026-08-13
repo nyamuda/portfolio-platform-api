@@ -11,7 +11,15 @@ public class ContactProfileOwnerDto
     /// <summary>
     /// Name of the person sending the message.
     /// </summary>
-    public required string Name { get; set; }
+    [Required]
+    public required string SenderName { get; set; }
+
+    /// <summary>
+    /// Display name of the profile owner the message is addressed to,
+    /// used to personalize the email (e.g. "Hi {RecipientName},").
+    /// </summary>
+    [Required]
+    public required string RecipientName { get; set; }
 
     /// <summary>
     /// Email address where the message will be delivered to the

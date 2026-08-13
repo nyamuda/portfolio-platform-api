@@ -21,4 +21,9 @@ public interface IEmailTemplateBuilder
     /// Builds the contact form notification email sent to the site owner.
     /// </summary>
     string BuildContactFormMessageTemplate(ContactDto contactDto);
+
+    /// <summary>
+    /// Builds the contact form notification email sent to a profile owner.
+    /// </summary>
+    string BuildProfileOwnerContactMessageTemplate(ContactProfileOwnerDto contactDto);
 }

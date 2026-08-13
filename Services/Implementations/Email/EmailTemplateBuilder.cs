@@ -74,6 +74,43 @@ public class EmailTemplateBuilder(IOptions<Company> options) : IEmailTemplateBui
 </html>";
     }
 
+    /// <inheritdoc/>
+    public string BuildProfileOwnerContactMessageTemplate(ContactProfileOwnerDto contactDto)
+    {
+        // Contact data comes from public input. Encode it before inserting it into
+        // HTML so markup is displayed as text rather than interpreted by the email client.
+        string senderName = WebUtility.HtmlEncode(contactDto.SenderName);
+        string recipientName = WebUtility.HtmlEncode(contactDto.RecipientName);
+        string senderEmail = WebUtility.HtmlEncode(contactDto.SenderEmail);
+        string topic = WebUtility.HtmlEncode(contactDto.Topic);
+
+        // Preserve line breaks from the message textarea while still keeping the text HTML-safe.
+        string message = WebUtility
+            .HtmlEncode(contactDto.Message)
+            .Replace("\r\n", "<br />")
+            .Replace("\n", "<br />");
+
+        // Keep the email intentionally simple, same as the site-wide contact template.
+        // The mailto points at the sender's email (not a fixed company address) so the
+        // profile owner can reply directly to the visitor who reached out.
+        return $@"
+<!DOCTYPE html>
+<html lang=""en"">
+  <body style=""margin:0;padding:0;background:#f7fafc;font-family:Helvetica,Arial,sans-serif;"">
+    <div style=""max-width:600px;margin:0 auto;padding:40px 16px;"">
+      <div style=""background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:32px;"">
+        <h1 style=""margin-top:0;font-size:24px;"">New message from your portfolio</h1>
+        <p>Hi {recipientName},</p>
+        <p><strong>From:</strong> {senderName}</p>
+        <p><strong>Email:</strong> <a href=""mailto:{senderEmail}"">{senderEmail}</a></p>
+        <p><strong>Topic:</strong> {topic}</p>
+        <p><strong>Message:</strong><br />{message}</p>
+      </div>
+    </div>
+  </body>
+</html>";
+    }
+
     private string BuildOtpEmail(
         string title,
         string heading,
