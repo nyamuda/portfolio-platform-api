@@ -17,10 +17,7 @@ public interface IContactService
     /// Sends a message submitted through a public profile's contact form to that
     /// profile owner's email address, resolved from the given profile slug.
     /// </summary>
-    /// <param name="profileSlug">
-    /// Slug of the published public profile the message was submitted from. Used to look up
-    /// the owning user's email address; the caller does not supply the recipient directly.
-    /// </param>
+
     /// <param name="dto">The contact message submitted by the visitor.</param>
     /// <exception cref="KeyNotFoundException">
     /// Thrown when no published profile matches <paramref name="profileSlug"/>.

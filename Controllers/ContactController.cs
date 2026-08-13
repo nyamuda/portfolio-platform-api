@@ -7,10 +7,8 @@ namespace PortfolioPlatform.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ContactController(
-    IContactService contactService,
-    ILogger<ContactController> logger
-) : ControllerBase
+public class ContactController(IContactService contactService, ILogger<ContactController> logger)
+    : ControllerBase
 {
     private readonly IContactService _contactService = contactService;
     private readonly ILogger<ContactController> _logger = logger;
@@ -30,6 +28,20 @@ public class ContactController(
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to process a contact form message.");
+            return StatusCode(500, ErrorResponse.Unexpected());
+        }
+    }
+
+    public async Task<IActionResult> PostProfileOwnerMessage(ContactProfileOwnerDto dto)
+    {
+        try
+        {
+            await _contactService.SendToProfileOwnerAsync(dto);
+            return NoContent();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to process a profile owner contact message.");
             return StatusCode(500, ErrorResponse.Unexpected());
         }
     }

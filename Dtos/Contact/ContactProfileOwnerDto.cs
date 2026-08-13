@@ -22,11 +22,11 @@ public class ContactProfileOwnerDto
     public required string RecipientName { get; set; }
 
     /// <summary>
-    /// Email address where the message will be delivered to the
-    /// profile owner.
+    /// The slug of the profile the message is addressed to, used to
+    /// resolve the recipient's email address.
     /// </summary>
     [Required]
-    public required string RecipientEmail { get; set; }
+    public required string RecipientSlug { get; set; }
 
     /// <summary>
     /// Email of the person sending the message. This is where the
