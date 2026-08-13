@@ -6,7 +6,7 @@ This document defines how backend work should be added to this API so the projec
 
 The API should be built by copying proven backend patterns first, then making only the changes that are required by the portfolio domain.
 
-This is not a greenfield API experiment. Most first-pass backend work should feel like:
+This is not a greenfield API experiment. Most backend feature work should follow this sequence:
 
 1. find the closest existing backend feature;
 2. copy the same structure;
@@ -26,7 +26,7 @@ Only adapt when:
 - the old code contains a known issue that should not be carried forward;
 - the change was explicitly discussed and approved.
 
-Avoid making independent architecture choices during the first port. The goal is speed, consistency, and confidence.
+Avoid making independent architecture choices when the API already has a suitable pattern. The goal is consistency, clarity, and confidence.
 
 ## Non-Negotiable Conventions
 
@@ -133,7 +133,10 @@ Good names:
 - `Project`
 - `BlogPost`
 - `CaseStudy`
-- `ContactMessage`
+- `Offering`
+- `Experience`
+- `Tag`
+- `Topic`
 
 Avoid names like:
 
@@ -145,9 +148,9 @@ Those names add noise without improving clarity.
 
 ## When Improvement Is Allowed
 
-Improvements are allowed, but they must be deliberate and small during the first port.
+Improvements are allowed, but they must be deliberate, scoped, and consistent with the existing architecture.
 
-Good first-pass improvements:
+Good incremental improvements:
 
 - clearer XML documentation on interfaces;
 - better inner comments for multi-step methods;
@@ -155,7 +158,7 @@ Good first-pass improvements:
 - safer validation where the existing behavior is clearly incomplete;
 - fixing obvious bugs while preserving the same structure.
 
-Avoid first-pass changes like:
+Avoid unapproved changes like:
 
 - changing id types;
 - replacing controller error-handling style;
@@ -164,10 +167,20 @@ Avoid first-pass changes like:
 - renaming familiar models without a domain reason;
 - adding a new architecture layer.
 
+## Portfolio Theme Boundary
+
+Theme selection is intentionally small on the backend. The `Profile` model stores only:
+
+- `Theme`;
+- `ThemeAccentColor`;
+- `ThemeTypography`.
+
+`IPortfolioThemeService` validates and updates those values. The frontend owns the compiled Vue components and CSS for each complete theme.
+
+Do not add a database theme catalogue, arbitrary JSON settings, component names, layout controls, draft design records, or theme administration endpoints unless the product requirements explicitly change. A new compiled theme normally requires one backend enum value and one corresponding frontend theme folder.
+
 ## Final Rule
 
 When in doubt, copy the existing pattern and make fewer changes.
 
 The portfolio domain can become richer over time, but the foundation should be familiar, boring, and reliable.
-
-

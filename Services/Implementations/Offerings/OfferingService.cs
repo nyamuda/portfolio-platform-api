@@ -13,7 +13,8 @@ namespace PortfolioPlatform.Api.Services.Implementations.Offerings;
 /// <summary>
 /// Handles offering management for profile owners and public visitors.
 /// </summary>
-public class OfferingService(ApplicationDbContext context, ITagService tagService) : IOfferingService
+public class OfferingService(ApplicationDbContext context, ITagService tagService)
+    : IOfferingService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly ITagService _tagService = tagService;
@@ -64,12 +65,14 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
 
         // Keep detail reads projected. The editor needs the offering fields, not a full entity graph.
         return await OfferingDtos(
-                _context
-                    .Offerings
-                    .AsNoTracking()
-                    .Where(offering => offering.Id == offeringId && offering.ProfileId == profileId)
-            )
-            .FirstOrDefaultAsync()
+                    _context
+                        .Offerings
+                        .AsNoTracking()
+                        .Where(
+                            offering => offering.Id == offeringId && offering.ProfileId == profileId
+                        )
+                )
+                .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Offering with ID '{offeringId}' was not found.");
     }
 
@@ -100,19 +103,21 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
     {
         // Offering slugs are unique inside a profile, so the profile slug is part of the public lookup.
         return await OfferingDtos(
-                _context
-                    .Offerings
-                    .AsNoTracking()
-                    .Where(
-                        offering =>
-                            offering.Slug == offeringSlug
-                            && offering.IsPublished
-                            && offering.Profile.IsPublished
-                            && offering.Profile.Slug == profileSlug
-                    )
-            )
-            .FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException($"Offering with slug '{offeringSlug}' was not found.");
+                    _context
+                        .Offerings
+                        .AsNoTracking()
+                        .Where(
+                            offering =>
+                                offering.Slug == offeringSlug
+                                && offering.IsPublished
+                                && offering.Profile.IsPublished
+                                && offering.Profile.Slug == profileSlug
+                        )
+                )
+                .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException(
+                $"Offering with slug '{offeringSlug}' was not found."
+            );
     }
 
     /// <inheritdoc/>
@@ -124,14 +129,15 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         // Slugs become public URLs, so reject duplicates before creating the record.
         await EnsureSlugIsAvailableAsync(profileId, dto.Slug);
 
-        Offering offering = new()
-        {
-            ProfileId = profileId,
-            Title = dto.Title,
-            Slug = dto.Slug,
-            Summary = dto.Summary,
-            CreatedAt = DateTime.UtcNow
-        };
+        Offering offering =
+            new()
+            {
+                ProfileId = profileId,
+                Title = dto.Title,
+                Slug = dto.Slug,
+                Summary = dto.Summary,
+                CreatedAt = DateTime.UtcNow
+            };
 
         // Use the same assignment helper as update so create/update behavior stays aligned.
         ApplyChanges(offering, dto);
@@ -152,10 +158,13 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         // Resolve ownership first. The update query is scoped by ProfileId so users cannot edit each other's offerings.
         int profileId = await GetOwnedProfileIdAsync(userId);
 
-        Offering offering = await _context
-            .Offerings
-            .Include(offering => offering.Tags)
-            .FirstOrDefaultAsync(offering => offering.Id == offeringId && offering.ProfileId == profileId)
+        Offering offering =
+            await _context
+                .Offerings
+                .Include(offering => offering.Tags)
+                .FirstOrDefaultAsync(
+                    offering => offering.Id == offeringId && offering.ProfileId == profileId
+                )
             ?? throw new KeyNotFoundException($"Offering with ID '{offeringId}' was not found.");
 
         // Exclude the current offering so an owner can save without changing the slug.
@@ -181,10 +190,13 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         // Deletes must be scoped just as tightly as updates. Resolve the owner profile first.
         int profileId = await GetOwnedProfileIdAsync(userId);
 
-        Offering offering = await _context
-            .Offerings
-            .Include(offering => offering.Tags)
-            .FirstOrDefaultAsync(offering => offering.Id == offeringId && offering.ProfileId == profileId)
+        Offering offering =
+            await _context
+                .Offerings
+                .Include(offering => offering.Tags)
+                .FirstOrDefaultAsync(
+                    offering => offering.Id == offeringId && offering.ProfileId == profileId
+                )
             ?? throw new KeyNotFoundException($"Offering with ID '{offeringId}' was not found.");
 
         _context.Offerings.Remove(offering);
@@ -197,7 +209,10 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
     /// <param name="query">The offering query already scoped to the authenticated owner.</param>
     /// <param name="filters">Filter values supplied from the request query string.</param>
     /// <returns>The filtered offering query.</returns>
-    private static IQueryable<Offering> ApplyOfferingFilters(IQueryable<Offering> query, OfferingFilters filters)
+    private static IQueryable<Offering> ApplyOfferingFilters(
+        IQueryable<Offering> query,
+        OfferingFilters filters
+    )
     {
         // Status is about public visibility. Owners can still see drafts; this only narrows the list.
         query = filters.Status switch
@@ -224,10 +239,19 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
                 offering =>
                     offering.Title.ToLower().Contains(searchTerm)
                     || offering.Summary.ToLower().Contains(searchTerm)
-                    || (offering.ContentText != null && offering.ContentText.ToLower().Contains(searchTerm))
+                    || (
+                        offering.ContentText != null
+                        && offering.ContentText.ToLower().Contains(searchTerm)
+                    )
                     || (offering.Price != null && offering.Price.ToLower().Contains(searchTerm))
-                    || (offering.DeliveryMode != null && offering.DeliveryMode.ToLower().Contains(searchTerm))
-                    || (offering.Duration != null && offering.Duration.ToLower().Contains(searchTerm))
+                    || (
+                        offering.DeliveryMode != null
+                        && offering.DeliveryMode.ToLower().Contains(searchTerm)
+                    )
+                    || (
+                        offering.Duration != null
+                        && offering.Duration.ToLower().Contains(searchTerm)
+                    )
                     || offering.Tags.Any(tag => tag.Name.ToLower().Contains(searchTerm))
             );
         }
@@ -241,7 +265,10 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
     /// <param name="query">The filtered offering query.</param>
     /// <param name="sortOption">The requested sort option.</param>
     /// <returns>The ordered offering query.</returns>
-    private static IQueryable<Offering> ApplyOfferingSort(IQueryable<Offering> query, OfferingSortOption sortOption)
+    private static IQueryable<Offering> ApplyOfferingSort(
+        IQueryable<Offering> query,
+        OfferingSortOption sortOption
+    )
     {
         // Manual order mirrors the public profile order: featured offerings first, then the owner's SortOrder.
         if (sortOption == OfferingSortOption.Manual)
@@ -260,8 +287,12 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
 
         // Date sorting uses UpdatedAt when available, then falls back to CreatedAt for untouched offerings.
         return sortOption == OfferingSortOption.Oldest
-            ? query.OrderBy(offering => offering.UpdatedAt ?? offering.CreatedAt).ThenBy(offering => offering.Title)
-            : query.OrderByDescending(offering => offering.UpdatedAt ?? offering.CreatedAt).ThenBy(offering => offering.Title);
+            ? query
+                .OrderBy(offering => offering.UpdatedAt ?? offering.CreatedAt)
+                .ThenBy(offering => offering.Title)
+            : query
+                .OrderByDescending(offering => offering.UpdatedAt ?? offering.CreatedAt)
+                .ThenBy(offering => offering.Title);
     }
 
     /// <summary>
@@ -272,32 +303,33 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
     private static IQueryable<OfferingDto> OfferingDtos(IQueryable<Offering> query)
     {
         // Centralizing the projection keeps every endpoint consistent and prevents accidental over-fetching.
-        return query.Select(offering => new OfferingDto
-        {
-            Id = offering.Id,
-            ProfileId = offering.ProfileId,
-            Title = offering.Title,
-            Slug = offering.Slug,
-            Summary = offering.Summary,
-
-            // The frontend owns the rich editor and sends both HTML and plain text.
-            ContentHtml = offering.ContentHtml,
-            ContentText = offering.ContentText,
-
-            Price = offering.Price,
-            DeliveryMode = offering.DeliveryMode,
-            Duration = offering.Duration,
-            CallToAction = offering.CallToAction,
-            CallToActionUrl = offering.CallToActionUrl,
-            Tags = offering.Tags.Select(tag => tag.Name).ToList(),
-            SortOrder = offering.SortOrder,
-            IsFeatured = offering.IsFeatured,
-            IsPublished = offering.IsPublished,
-            SeoTitle = offering.SeoTitle,
-            SeoDescription = offering.SeoDescription,
-            CreatedAt = offering.CreatedAt,
-            UpdatedAt = offering.UpdatedAt
-        });
+        return query.Select(
+            offering =>
+                new OfferingDto
+                {
+                    Id = offering.Id,
+                    ProfileId = offering.ProfileId,
+                    Title = offering.Title,
+                    Slug = offering.Slug,
+                    Summary = offering.Summary,
+                    // The frontend owns the rich editor and sends both HTML and plain text.
+                    ContentHtml = offering.ContentHtml,
+                    ContentText = offering.ContentText,
+                    Price = offering.Price,
+                    DeliveryMode = offering.DeliveryMode,
+                    Duration = offering.Duration,
+                    CallToAction = offering.CallToAction,
+                    CallToActionUrl = offering.CallToActionUrl,
+                    Tags = offering.Tags.Select(tag => tag.Name).ToList(),
+                    SortOrder = offering.SortOrder,
+                    IsFeatured = offering.IsFeatured,
+                    IsPublished = offering.IsPublished,
+                    SeoTitle = offering.SeoTitle,
+                    SeoDescription = offering.SeoDescription,
+                    CreatedAt = offering.CreatedAt,
+                    UpdatedAt = offering.UpdatedAt
+                }
+        );
     }
 
     /// <summary>
@@ -317,7 +349,8 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
             .FirstOrDefaultAsync();
 
         // Keep this message helpful for the frontend instead of exposing database language.
-        return profileId ?? throw new InvalidOperationException("Create your profile before adding offerings.");
+        return profileId
+            ?? throw new InvalidOperationException("Create your profile before adding offerings.");
     }
 
     /// <summary>
@@ -327,7 +360,11 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
     /// <param name="slug">The URL-safe slug the user wants to save.</param>
     /// <param name="currentOfferingId">The existing offering id to ignore when updating an offering.</param>
     /// <exception cref="ConflictException">Thrown when another offering on the same profile already uses the slug.</exception>
-    private async Task EnsureSlugIsAvailableAsync(int profileId, string slug, int? currentOfferingId = null)
+    private async Task EnsureSlugIsAvailableAsync(
+        int profileId,
+        string slug,
+        int? currentOfferingId = null
+    )
     {
         // A slug only needs to be unique inside one profile, just like projects and blog posts.
         bool slugAlreadyInUse = await _context
@@ -360,7 +397,11 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         // Remove tags that are no longer present in the submitted list.
         foreach (Tag tag in offering.Tags.ToList())
         {
-            if (!cleanedTagNames.Any(tagName => tagName.Equals(tag.Name, StringComparison.OrdinalIgnoreCase)))
+            if (
+                !cleanedTagNames.Any(
+                    tagName => tagName.Equals(tag.Name, StringComparison.OrdinalIgnoreCase)
+                )
+            )
             {
                 offering.Tags.Remove(tag);
             }
@@ -369,7 +410,11 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         // Add missing tags through the tag service so existing tag rows are reused.
         foreach (string tagName in cleanedTagNames)
         {
-            if (offering.Tags.Any(tag => tag.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase)))
+            if (
+                offering
+                    .Tags
+                    .Any(tag => tag.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase))
+            )
                 continue;
 
             Tag tag = await _tagService.GetByNameAsync(tagName);
@@ -412,4 +457,3 @@ public class OfferingService(ApplicationDbContext context, ITagService tagServic
         offering.SeoDescription = dto.SeoDescription;
     }
 }
-

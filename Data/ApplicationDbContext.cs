@@ -14,6 +14,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<Project> Projects { get; set; }
     public DbSet<Offering> Offerings { get; set; }
+    public DbSet<Experience> Experiences { get; set; }
+    public DbSet<ExperienceType> ExperienceTypes { get; set; }
     public DbSet<BlogPost> BlogPosts { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<Topic> Topics { get; set; }
@@ -30,6 +32,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                     // EnsureCreated all run the same initialization logic.
                     CommonTopicSeeder.Seed(context);
                     CommonTagSeeder.Seed(context);
+                    CommonExperienceTypeSeeder.Seed(context);
                 }
             )
             .UseAsyncSeeding(
@@ -39,6 +42,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                     // but runtime code may call the async version during database initialization.
                     await CommonTopicSeeder.SeedAsync(context, cancellationToken);
                     await CommonTagSeeder.SeedAsync(context, cancellationToken);
+                    await CommonExperienceTypeSeeder.SeedAsync(context, cancellationToken);
                 }
             );
     }
@@ -71,7 +75,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey<Profile>(profile => profile.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // A Profile can have multiple Projects while a Project can only belong to one Profile.
+// A Profile can have multiple Projects while a Project can only belong to one Profile.
         // Hence, there is a one-to-many relationship between Profile and Project.
         //
         // Cascade is intentional here: projects are part of the public portfolio profile.
@@ -96,6 +100,42 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(offering => offering.ProfileId)
             .OnDelete(DeleteBehavior.Cascade);
 
+
+        // A Profile can have multiple Experiences while an Experience can only belong to one Profile.
+        // Hence, there is a one-to-many relationship between Profile and Experience.
+        //
+        // Experiences are public-profile timeline content. They describe work, education,
+        // volunteering, certifications, milestones, and similar background entries. If the profile
+        // is deleted, its timeline entries should be deleted too because they cannot stand alone
+        // without a profile owner.
+        modelBuilder
+            .Entity<Experience>()
+            .HasOne(experience => experience.Profile)
+            .WithMany(profile => profile.Experiences)
+            .HasForeignKey(experience => experience.ProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // One ExperienceType can be used by many Experiences, while each Experience chooses one
+        // primary ExperienceType. That means this is a one-to-many relationship from
+        // ExperienceType to Experience.
+        //
+        // Examples:
+        // - The "Work" type can classify many entries such as "Software Engineer at Acme" and
+        //   "Freelance Web Developer".
+        // - The "Education" type can classify many entries such as "BSc Computer Science" and
+        //   "Cambridge A Level Chemistry".
+        // - The "Volunteering" type can classify many entries across many different profiles.
+        //
+        // The foreign key belongs on Experience because each timeline entry picks exactly one
+        // primary type. ExperienceType is shared vocabulary, not content owned by a single profile.
+        // Restrict deletion prevents an admin from deleting "Work" or "Education" while timeline
+        // entries still depend on it. The admin should move those experiences to another type first.
+        modelBuilder
+            .Entity<Experience>()
+            .HasOne(experience => experience.ExperienceType)
+            .WithMany(type => type.Experiences)
+            .HasForeignKey(experience => experience.ExperienceTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
         // A Profile can have many BlogPosts while a BlogPost can only belong to one Profile.
         // Blog posts follow the same ownership rule as projects: they are public-profile content,
         // not standalone records. If the profile is deleted, its drafts and published posts should
@@ -130,6 +170,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(tag => tag.Offerings)
             .UsingEntity(join => join.ToTable("OfferingTags"));
 
+
+        // An Experience can use multiple Tags, and a Tag can be reused by multiple Experiences.
+        // Hence, there is a many-to-many relationship between Experience and Tag.
+        //
+        // Tags add flexible context to timeline entries without replacing the primary ExperienceType.
+        // For example, an experience can have the type "Work" and tags such as Vue, ASP.NET Core,
+        // Tutoring, Leadership, or Product Design. Removing an experience only removes its join rows;
+        // the shared tags remain available for projects, posts, offerings, and other experiences.
+        modelBuilder
+            .Entity<Experience>()
+            .HasMany(experience => experience.Tags)
+            .WithMany(tag => tag.Experiences)
+            .UsingEntity(join => join.ToTable("ExperienceTags"));
         // A BlogPost can optionally belong to one managed Topic while a Topic can group many BlogPosts.
         // Topic is deliberately optional because writers should be able to draft a post before choosing a final topic.
         modelBuilder
@@ -151,6 +204,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .UsingEntity(join => join.ToTable("BlogPostTags"));
     }
 }
+
+
 
 
 

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PortfolioPlatform.Api.Data;
@@ -12,9 +13,11 @@ using PortfolioPlatform.Api.Data;
 namespace PortfolioPlatform.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260710123708_OfferingMigration")]
+    partial class OfferingMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,21 +39,6 @@ namespace PortfolioPlatform.Api.Migrations
                     b.HasIndex("TagsId");
 
                     b.ToTable("BlogPostTags", (string)null);
-                });
-
-            modelBuilder.Entity("ExperienceTag", b =>
-                {
-                    b.Property<int>("ExperiencesId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TagsId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("ExperiencesId", "TagsId");
-
-                    b.HasIndex("TagsId");
-
-                    b.ToTable("ExperienceTags", (string)null);
                 });
 
             modelBuilder.Entity("OfferingTag", b =>
@@ -138,138 +126,6 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("BlogPosts");
-                });
-
-            modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Experience", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Commitment")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("DescriptionHtml")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DescriptionText")
-                        .HasColumnType("text");
-
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("ExperienceTypeId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ExternalUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsCurrent")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsFeatured")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsPublished")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<int>("Mode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Organization")
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<int>("ProfileId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<DateOnly?>("StartDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Summary")
-                        .HasMaxLength(520)
-                        .HasColumnType("character varying(520)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExperienceTypeId");
-
-                    b.HasIndex("ProfileId");
-
-                    b.ToTable("Experiences");
-                });
-
-            modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.ExperienceType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ColorHex")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("IconName")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<bool>("IsFeatured")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("Slug")
-                        .HasMaxLength(140)
-                        .HasColumnType("character varying(140)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.ToTable("ExperienceTypes");
                 });
 
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Offering", b =>
@@ -609,17 +465,6 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Property<string>("Tagline")
                         .HasColumnType("text");
 
-                    b.Property<int>("Theme")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ThemeAccentColor")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<int>("ThemeTypography")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -772,21 +617,6 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ExperienceTag", b =>
-                {
-                    b.HasOne("PortfolioPlatform.Api.Models.Content.Experience", null)
-                        .WithMany()
-                        .HasForeignKey("ExperiencesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PortfolioPlatform.Api.Models.Content.Tag", null)
-                        .WithMany()
-                        .HasForeignKey("TagsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("OfferingTag", b =>
                 {
                     b.HasOne("PortfolioPlatform.Api.Models.Content.Offering", null)
@@ -818,25 +648,6 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Navigation("Profile");
 
                     b.Navigation("Topic");
-                });
-
-            modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Experience", b =>
-                {
-                    b.HasOne("PortfolioPlatform.Api.Models.Content.ExperienceType", "ExperienceType")
-                        .WithMany("Experiences")
-                        .HasForeignKey("ExperienceTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("PortfolioPlatform.Api.Models.Profiles.Profile", "Profile")
-                        .WithMany("Experiences")
-                        .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ExperienceType");
-
-                    b.Navigation("Profile");
                 });
 
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Offering", b =>
@@ -898,11 +709,6 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.ExperienceType", b =>
-                {
-                    b.Navigation("Experiences");
-                });
-
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Content.Topic", b =>
                 {
                     b.Navigation("BlogPosts");
@@ -911,8 +717,6 @@ namespace PortfolioPlatform.Api.Migrations
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Profiles.Profile", b =>
                 {
                     b.Navigation("BlogPosts");
-
-                    b.Navigation("Experiences");
 
                     b.Navigation("Offerings");
 

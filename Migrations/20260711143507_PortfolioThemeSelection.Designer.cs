@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PortfolioPlatform.Api.Data;
@@ -12,9 +13,11 @@ using PortfolioPlatform.Api.Data;
 namespace PortfolioPlatform.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260711143507_PortfolioThemeSelection")]
+    partial class PortfolioThemeSelection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -609,17 +612,6 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Property<string>("Tagline")
                         .HasColumnType("text");
 
-                    b.Property<int>("Theme")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ThemeAccentColor")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<int>("ThemeTypography")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -643,6 +635,104 @@ namespace PortfolioPlatform.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Profiles");
+                });
+
+            modelBuilder.Entity("PortfolioPlatform.Api.Models.Themes.PortfolioTheme", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Availability")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("LatestVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("PreviewImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("PortfolioThemes");
+                });
+
+            modelBuilder.Entity("PortfolioPlatform.Api.Models.Themes.ProfileThemeSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActiveSettingsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ActiveThemeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ActiveThemeVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DraftSettingsJson")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("DraftThemeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DraftThemeVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProfileId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActiveThemeId");
+
+                    b.HasIndex("DraftThemeId");
+
+                    b.HasIndex("ProfileId")
+                        .IsUnique();
+
+                    b.ToTable("ProfileThemeSettings");
                 });
 
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Users.User", b =>
@@ -872,6 +962,32 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PortfolioPlatform.Api.Models.Themes.ProfileThemeSettings", b =>
+                {
+                    b.HasOne("PortfolioPlatform.Api.Models.Themes.PortfolioTheme", "ActiveTheme")
+                        .WithMany("ActiveProfileSettings")
+                        .HasForeignKey("ActiveThemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PortfolioPlatform.Api.Models.Themes.PortfolioTheme", "DraftTheme")
+                        .WithMany("DraftProfileSettings")
+                        .HasForeignKey("DraftThemeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PortfolioPlatform.Api.Models.Profiles.Profile", "Profile")
+                        .WithOne("ThemeSettings")
+                        .HasForeignKey("PortfolioPlatform.Api.Models.Themes.ProfileThemeSettings", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActiveTheme");
+
+                    b.Navigation("DraftTheme");
+
+                    b.Navigation("Profile");
+                });
+
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Users.UserOtp", b =>
                 {
                     b.HasOne("PortfolioPlatform.Api.Models.Users.User", "User")
@@ -917,6 +1033,15 @@ namespace PortfolioPlatform.Api.Migrations
                     b.Navigation("Offerings");
 
                     b.Navigation("Projects");
+
+                    b.Navigation("ThemeSettings");
+                });
+
+            modelBuilder.Entity("PortfolioPlatform.Api.Models.Themes.PortfolioTheme", b =>
+                {
+                    b.Navigation("ActiveProfileSettings");
+
+                    b.Navigation("DraftProfileSettings");
                 });
 
             modelBuilder.Entity("PortfolioPlatform.Api.Models.Users.User", b =>

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using PortfolioPlatform.Api.Models.Content;
+using PortfolioPlatform.Api.Enums.Themes;
 using PortfolioPlatform.Api.Models.Users;
 
 namespace PortfolioPlatform.Api.Models.Profiles;
@@ -171,6 +172,21 @@ public class Profile
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
+    /// Complete visual design used by the public portfolio.
+    /// </summary>
+    public PortfolioTheme Theme { get; set; } = PortfolioTheme.Classic;
+
+    /// <summary>
+    /// Accent colour used for buttons, links, and small highlights in the selected theme.
+    /// </summary>
+    [StringLength(7)]
+    public string ThemeAccentColor { get; set; } = "#1640D6";
+
+    /// <summary>
+    /// Broad typography treatment used by the selected theme.
+    /// </summary>
+    public PortfolioTypography ThemeTypography { get; set; } = PortfolioTypography.Sans;
+/// <summary>
     /// Projects created under this profile.
     /// </summary>
     /// <remarks>
@@ -187,6 +203,14 @@ public class Profile
     public List<Offering> Offerings { get; set; } = [];
 
     /// <summary>
+    /// Timeline experiences created under this profile.
+    /// </summary>
+    /// <remarks>
+    /// The collection contains drafts and published experiences for owner views. Public services filter it.
+    /// </remarks>
+    public List<Experience> Experiences { get; set; } = [];
+
+    /// <summary>
     /// Blog posts created under this profile.
     /// </summary>
     /// <remarks>
@@ -194,6 +218,8 @@ public class Profile
     /// </remarks>
     public List<BlogPost> BlogPosts { get; set; } = [];
 }
+
+
 
 
 

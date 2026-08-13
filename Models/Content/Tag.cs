@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace PortfolioPlatform.Api.Models.Content;
@@ -66,6 +66,11 @@ public class Tag
     public List<Offering> Offerings { get; set; } = [];
 
     /// <summary>
+    /// Experiences that currently use this tag.
+    /// </summary>
+    public List<Experience> Experiences { get; set; } = [];
+
+    /// <summary>
     /// Blog posts that currently use this tag.
     /// </summary>
     public List<BlogPost> BlogPosts { get; set; } = [];
@@ -80,4 +85,6 @@ public class Tag
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 }
+
+
 
