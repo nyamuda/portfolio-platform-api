@@ -46,13 +46,20 @@ public class ContactService(
     /// <inheritdoc/>
     public async Task SendToProfileOwnerAsync(ContactProfileOwnerDto dto)
     {
-        // check if the profile slug is valid and corresponds to a published profile
+        // The frontend only ever tells us which profile the message is for, never an
+        // email address directly.
+        // Resolving the address server-side from the slug keeps the real recipient
+        // entirely outside the caller's control.
+    
         string recipientEmail =
             await _context
                 .Profiles
                 .Where(p => p.Slug == dto.RecipientSlug)
                 .Select(p => p.User.Email)
                 .FirstOrDefaultAsync()
+            // A missing match means the slug is invalid, mistyped, or stale. There is no
+            // owner to email, so this fails loudly here rather than sending a message that
+            // silently goes nowhere.
             ?? throw new KeyNotFoundException($"Error: user with given profile not found.");
 
         // Build the email body from the validated public form input.

@@ -32,6 +32,15 @@ public class ContactController(IContactService contactService, ILogger<ContactCo
         }
     }
 
+    /// <summary>
+    /// Accepts a public contact message addressed to a specific profile owner.
+    /// </summary>
+    /// <param name="dto">
+    /// The contact message submitted by the visitor, including the slug of the profile
+    /// the message is for. The recipient's email address is resolved server-side from
+    /// that slug — it is never accepted directly from the request.
+    /// </param>
+    [HttpPost("profile-owner")]
     public async Task<IActionResult> PostProfileOwnerMessage(ContactProfileOwnerDto dto)
     {
         try
